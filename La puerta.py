@@ -1,21 +1,12 @@
-# La puerta.py
 import pandas as pd
 import requests
 import os
 import glob
 from Conocimiento import generar_imagen
 
-# =========================
-# RUTA BASE DEL PROYECTO
-# =========================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+def ruta(path): return os.path.join(BASE_DIR, path)
 
-def ruta(path):
-    return os.path.join(BASE_DIR, path)
-
-# =========================
-# MAPEO SEDE → PLANTILLA
-# =========================
 MAPA_SEDES = {
     "🏛️ San Joaquín": "SJ",
     "🚢 Casa Central": "CC",
@@ -26,19 +17,16 @@ MAPA_SEDES = {
 
 def resolver_plantilla(sede):
     for clave, valor in MAPA_SEDES.items():
-        if clave in sede:
-            return valor, None
+        if clave in sede: return valor, None
     return "Default", sede.strip()
 
-# =========================
-# CONFIG
-# =========================
-os.makedirs(ruta("archivos"),    exist_ok=True)
+# Preparación carpetas
+os.makedirs(ruta("archivos"), exist_ok=True)
 os.makedirs(ruta("Confesiones"), exist_ok=True)
 
+# Manejo CSV
 csv_files = glob.glob(ruta("*.csv"))
-if not csv_files:
-    raise Exception("No se encontró ningún archivo CSV en la carpeta")
+if not csv_files: raise Exception("No hay CSV")
 CSV_FILE = csv_files[0]
 destino_csv = ruta("La llave.csv")
 if CSV_FILE != destino_csv:
@@ -46,162 +34,138 @@ if CSV_FILE != destino_csv:
     CSV_FILE = destino_csv
 
 # =========================
-# PEDIR FILA DE INICIO Y RANGO
-# =========================
-while True:
-    try:
-        fila_inicio = int(input("¿Desde qué fila deseas comenzar? (1 = primera fila de datos): "))
-        if fila_inicio < 1:
-            print("El número debe ser 1 o mayor.")
-            continue
-        break
-    except ValueError:
-        print("Por favor ingresa un número válido.")
-
-while True:
-    try:
-        rango = int(input("¿Cuántas confesiones deseas procesar?: "))
-        if rango < 1:
-            print("El rango debe ser 1 o mayor.")
-            continue
-        break
-    except ValueError:
-        print("Por favor ingresa un número válido.")
-
-# =========================
-# LEER CSV
+# LECTURA DE CSV (Se mueve arriba para poder mostrar las confesiones a ignorar)
 # =========================
 COLUMNAS = ["marca_temporal", "confesion", "imagen", "sede"]
-
-df = pd.read_csv(
-    CSV_FILE,
-    encoding="utf-8",
-    quotechar='"',
-    skipinitialspace=True,
-    engine="python",
-    on_bad_lines="warn",
-    names=COLUMNAS,
-    header=0,
-)
-
-# Limpiar filas completamente vacías
+df = pd.read_csv(CSV_FILE, encoding="utf-8", engine="python", names=COLUMNAS, header=0)
 df = df.dropna(how="all")
 
-# Rellenar NaN con string vacío en columnas clave
+# Crear ID incremental
+df.insert(0, "id_csv", range(1, len(df) + 1))
+
 df["confesion"] = df["confesion"].fillna("")
 df["sede"]      = df["sede"].fillna("")
 df["imagen"]    = df["imagen"].fillna("")
 
-print(f"Total de filas leídas: {len(df)}")
+# =========================
+# FLUJO DE ENTRADA
+# =========================
+while True:
+    try:
+        fila_inicio = int(input("¿Desde qué fila deseas comenzar? (1 = primera): "))
+        rango = int(input("¿Cuántas confesiones procesar?: "))
+        break
+    except ValueError: print("Ingresa números válidos.")
 
-df["fila_real"] = range(1, len(df) + 1)
-total_filas = len(df)
+# Loop de ignorados CON CONFIRMACIÓN
+ignorados = set()
+print("\n--- Modo Ignorar ---")
+print("Ingresa el número de fila (id) que quieres saltar. Escribe 'X' para terminar.")
+while True:
+    entrada = input("ID a ignorar: ").strip().upper()
+    if entrada == "X": break
+    try:
+        id_ignorar = int(entrada)
+        # Buscar en el DataFrame
+        fila = df[df["id_csv"] == id_ignorar]
+        
+        if not fila.empty:
+            texto_conf = str(fila.iloc[0]["confesion"]).strip()
+            # Mostramos un fragmento si la confesión es absurdamente larga
+            texto_mostrar = (texto_conf[:70] + '...') if len(texto_conf) > 70 else texto_conf
+            
+            confirma = input(f'\nQuieres eliminar la confesion "{texto_mostrar}" Numero "{id_ignorar}"? (S/N): ').strip().upper()
+            if confirma == 'S':
+                ignorados.add(id_ignorar)
+                print(f"-> ID {id_ignorar} ignorado exitosamente.\n")
+            else:
+                print("-> Acción cancelada.\n")
+        else:
+            print(f"-> No se encontró el ID {id_ignorar} en el CSV.\n")
+            
+    except ValueError:
+        continue
 
-df = df[df["fila_real"] >= fila_inicio].reset_index(drop=True)
+# Número base para el diseño
+try:
+    numero_base = int(input("\n¿Con qué número quieres que EMPIECE el diseño de la imagen?: "))
+except ValueError:
+    numero_base = 1
 
-if df.empty:
-    print(f"No hay filas desde la posición {fila_inicio}. El CSV tiene {total_filas} filas en total.")
-    exit()
-
-# Aplicar rango — si hay menos filas disponibles, procesa las que haya
-disponibles = len(df)
-df = df.head(rango)
-print(f"Procesando {len(df)} de {rango} pedidas ({disponibles} disponibles desde fila {fila_inicio})")
-
-# Columnas fijas
-col_confesion = "confesion"
-col_sede      = "sede"
-col_link      = "imagen"
+# Filtrar el DataFrame
+df_procesar = df[df["id_csv"] >= fila_inicio].copy()
+df_procesar = df_procesar[~df_procesar["id_csv"].isin(ignorados)]
+df_procesar = df_procesar.head(rango)
 
 # =========================
-# FUNCIONES DESCARGA
+# FUNCIONES DE RED
 # =========================
 def convertir_drive(url):
-    if "id=" in url:
-        file_id = url.split("id=")[-1].split("&")[0].strip()
-    elif "/d/" in url:
-        file_id = url.split("/d/")[1].split("/")[0].strip()
-    else:
-        return None
-    if not file_id:
-        return None
-    return f"https://drive.google.com/uc?export=download&id={file_id}"
-
-def obtener_extension(response):
-    content_type = response.headers.get("Content-Type", "")
-    if   "image/jpeg"         in content_type: return ".jpg"
-    elif "image/png"          in content_type: return ".png"
-    elif "image/webp"         in content_type: return ".webp"
-    elif "image/gif"          in content_type: return ".gif"
-    elif "application/pdf"    in content_type: return ".pdf"
-    elif "video/mp4"          in content_type: return ".mp4"
-    elif "video/quicktime"    in content_type: return ".mov"
-    elif "video/webm"         in content_type: return ".webm"
-    elif "audio/mpeg"         in content_type: return ".mp3"
-    elif "audio/wav"          in content_type: return ".wav"
-    elif "audio/ogg"          in content_type: return ".ogg"
-    else:
-        disposition = response.headers.get("Content-Disposition", "")
-        if "filename=" in disposition:
-            filename = disposition.split("filename=")[-1].strip().strip('"')
-            _, ext = os.path.splitext(filename)
-            if ext:
-                return ext
-        return ""
+    if "id=" in url: id_f = url.split("id=")[-1].split("&")[0]
+    elif "/d/" in url: id_f = url.split("/d/")[1].split("/")[0]
+    else: return None
+    return f"https://drive.google.com/uc?export=download&id={id_f}"
 
 def descargar(url, base_path):
+    """Descarga el archivo y verifica si es imagen. Retorna ruta, 'INVALIDO' o None."""
     try:
-        r = requests.get(url)
+        r = requests.get(url, timeout=10)
         if r.status_code == 200:
-            ext  = obtener_extension(r)
+            content_type = r.headers.get("Content-Type", "")
+            if "jpeg" in content_type:
+                ext = ".jpg"
+            elif "png" in content_type:
+                ext = ".png"
+            else:
+                return "INVALIDO" # Es un PDF, Video, Doc, etc.
+                
             path = base_path + ext
-            with open(path, "wb") as f:
-                f.write(r.content)
+            with open(path, "wb") as f: f.write(r.content)
             return path
-    except Exception as e:
-        print("Error descarga:", e)
+    except: pass
     return None
 
 # =========================
-# LOOP PRINCIPAL
+# LOOP DE GENERACIÓN
 # =========================
-generadas   = 0
-descargadas = 0
+print(f"\nIniciando... Numeración visual empezará en: {numero_base}\n")
 
-for _, row in df.iterrows():
-    fila_csv  = row["fila_real"]
-    confesion = str(row[col_confesion]).strip()
-    sede      = str(row[col_sede]).strip()
-
-    if not confesion or confesion.lower() == "nan":
-        print(f"[SKIP] fila {fila_csv} — sin confesión")
-        continue
-
-    # --- Generar imagen de confesión ---
+for i, (_, row) in enumerate(df_procesar.iterrows()):
+    numero_visual = numero_base + i
+    
+    confesion = str(row["confesion"]).strip()
+    sede = str(row["sede"]).strip()
+    link_drive = str(row["imagen"]).strip()
+    
     plantilla, sede_custom = resolver_plantilla(sede)
+    
+    ruta_adjunto = None
+    requiere_canva = False
+    
+    # Procesar enlace de Drive
+    if "drive.google.com" in link_drive:
+        url_directa = convertir_drive(link_drive)
+        if url_directa:
+            resultado = descargar(url_directa, ruta(f"archivos/adjunto_{numero_visual}"))
+            if resultado == "INVALIDO":
+                requiere_canva = True # Activamos flag para nombre especial
+            elif resultado:
+                ruta_adjunto = resultado
+
     try:
         generar_imagen(
             nombre_plantilla = plantilla,
-            numero           = fila_csv,
-            confesion        = confesion,
-            sede_custom      = sede_custom
+            numero = numero_visual,
+            confesion = confesion,
+            sede_custom = sede_custom,
+            ruta_adjunto = ruta_adjunto,
+            requiere_canva = requiere_canva
         )
-        generadas += 1
+        msg = f"[OK] ID CSV {row['id_csv']} -> Imagen {numero_visual}"
+        if requiere_canva: msg += " (Formato incompatible -> Etiqueta Canva añadida)"
+        elif ruta_adjunto: msg += " (Con Adjunto V1/V2)"
+        print(msg)
     except Exception as e:
-        print(f"[FAIL imagen] fila {fila_csv}: {e}")
+        print(f"[ERROR] En ID {row['id_csv']}: {e}")
 
-    # --- Descargar archivo adjunto de Drive (si existe) ---
-    valor = str(row[col_link]).strip()
-    if "drive.google.com" in valor:
-        url = convertir_drive(valor)
-        if url:
-            base_nombre = ruta(f"archivos/versiculo_{fila_csv}")
-            resultado   = descargar(url, base_nombre)
-            if resultado:
-                print(f"[OK adjunto] {resultado}")
-                descargadas += 1
-            else:
-                print(f"[FAIL adjunto] fila {fila_csv}")
-
-print(f"\nImágenes generadas  : {generadas}")
-print(f"Adjuntos descargados: {descargadas}")
+print("\nProceso finalizado.")
