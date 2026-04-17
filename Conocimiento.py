@@ -148,3 +148,65 @@ def generar_imagen(nombre_plantilla, numero, confesion, sede_custom=None, ruta_a
         pos_y2 = Y_CONFESION + ((Y_LIMITE_INFERIOR_CONFESION - Y_CONFESION) - adjunto_v2.height) // 2
         img_v2_2.alpha_composite(adjunto_v2, (pos_x2, pos_y2))
         img_v2_2.save(f"Confesiones/Confesion {numero} V2 (2).png")
+
+def indecision(df, id_target, accion_texto):
+    """Muestra una confesión y pide confirmación para una acción."""
+    fila = df[df["id_csv"] == id_target]
+    
+    if not fila.empty:
+        texto_conf = str(fila.iloc[0]["confesion"]).strip()
+        texto_mostrar = (texto_conf[:70] + '...') if len(texto_conf) > 70 else texto_conf
+        
+        confirma = input(f'\n¿Quieres {accion_texto} la confesión "{texto_mostrar}" Número "{id_target}"? (S/N): ').strip().upper()
+        return confirma == 'S'
+    else:
+        print(f"-> Error: No se encontró el ID {id_target} en el CSV.")
+        return False
+
+def las_pruebas(df):
+    """Centraliza las 4 consultas por consola y retorna los parámetros de ejecución."""
+    print("\n--- [LAS PRUEBAS: Configuración de Sesión] ---")
+    
+    # 1. Fila de inicio
+    while True:
+        try:
+            fila_inicio = int(input("¿Desde qué fila (ID) deseas comenzar? (1 = primera): "))
+            if indecision(df, fila_inicio, "comenzar desde"):
+                break
+        except ValueError:
+            print("Ingresa un número válido.")
+
+    # 2. Rango de procesamiento
+    while True:
+        try:
+            rango = int(input("\n¿Cuántas confesiones procesar?: "))
+            break
+        except ValueError: 
+            print("Ingresa un número válido.")
+
+    # 3. Loop de ignorados
+    ignorados = set()
+    print("\n--- Modo Ignorar ---")
+    print("Ingresa el ID que quieres saltar. Escribe 'X' para terminar.")
+    while True:
+        entrada = input("ID a ignorar: ").strip().upper()
+        if entrada == "X": 
+            break
+        try:
+            id_ignorar = int(entrada)
+            if indecision(df, id_ignorar, "eliminar"):
+                ignorados.add(id_ignorar)
+                print(f"-> ID {id_ignorar} ignorado exitosamente.\n")
+            else:
+                print("-> Acción cancelada.\n")
+        except ValueError:
+            continue
+
+    # 4. Número base visual
+    try:
+        numero_base = int(input("\n¿Con qué número quieres que EMPIECE el diseño visual?: "))
+    except ValueError:
+        numero_base = 1
+
+    return fila_inicio, rango, ignorados, numero_base
+
