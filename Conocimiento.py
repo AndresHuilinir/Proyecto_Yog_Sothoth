@@ -34,15 +34,19 @@ COLORES_CONFESION = {
     "Default": (0,   0,   0,   255),
 }
 
+# Imagen dummy global — se crea una sola vez para medir texto
+_DUMMY_IMG  = Image.new("RGB", (1, 1))
+_DUMMY_DRAW = ImageDraw.Draw(_DUMMY_IMG)
+
 # =========================
 # FUNCIONES AUXILIARES
 # =========================
-def dividir_texto_en_lineas(texto, fuente, ancho_max, draw):
+def dividir_texto_en_lineas(texto, fuente, ancho_max):
     palabras = texto.split()
     lineas, linea_actual = [], ""
     for palabra in palabras:
         prueba = linea_actual + (" " if linea_actual else "") + palabra
-        bbox   = draw.textbbox((0, 0), prueba, font=fuente)
+        bbox   = _DUMMY_DRAW.textbbox((0, 0), prueba, font=fuente)
         if (bbox[2] - bbox[0]) <= ancho_max:
             linea_actual = prueba
         else:
@@ -54,54 +58,74 @@ def dividir_texto_en_lineas(texto, fuente, ancho_max, draw):
     return lineas
 
 def ajustar_fuente_confesion(texto, fuente_path, ancho_max, y_inicio, y_limite, size_default):
-    size = size_default
-    dummy_img  = Image.new("RGB", (1, 1))
-    dummy_draw = ImageDraw.Draw(dummy_img)
-    while size > 8:
+    for size in range(size_default, 7, -1):
         fuente = ImageFont.truetype(fuente_path, size)
-        lineas = dividir_texto_en_lineas(texto, fuente, ancho_max, dummy_draw)
+        lineas = dividir_texto_en_lineas(texto, fuente, ancho_max)
         alto_total = sum(
-            (dummy_draw.textbbox((0, 0), l, font=fuente)[3]
-             - dummy_draw.textbbox((0, 0), l, font=fuente)[1] + 10)
+            (_DUMMY_DRAW.textbbox((0, 0), l, font=fuente)[3]
+             - _DUMMY_DRAW.textbbox((0, 0), l, font=fuente)[1] + 10)
             for l in lineas
         )
         if y_inicio + alto_total <= y_limite:
             return fuente, lineas
-        size -= 1
     fuente = ImageFont.truetype(fuente_path, 8)
-    return fuente, dividir_texto_en_lineas(texto, fuente, ancho_max, dummy_draw)
+    return fuente, dividir_texto_en_lineas(texto, fuente, ancho_max)
 
-def formatear_con_dos_puntos(s: str) -> str:
-    s      = str(s).zfill(2)
-    grupos = [s[max(0, i - 2):i] for i in range(len(s), 0, -2)]
-    grupos.reverse()
-    return ":".join(grupos)
+def formatear_con_dos_puntos(n) -> str:
+    s = str(n)
+    # Agrupa de derecha a izquierda en pares separados por ":"
+    return ":".join(s[max(0, i-2):i] for i in range(len(s), 0, -2))[::-1].replace(":", "")[::-1] or s
 
-def dibujar_base(img, draw, nombre_plantilla, numero, sede_custom):
-    color_blanco  = (255, 255, 255, 255)
+def _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom,
+                     lineas, fuente, color_confesion, y_confesion_limite,
+                     adjunto=None, y_adjunto_desde=None):
+    """
+    Función interna que compone una imagen completa y la retorna.
+    Centraliza toda la lógica de renderizado evitando repetición.
+    """
+    img  = Image.open(ruta_plantilla).convert("RGBA")
+    draw = ImageDraw.Draw(img)
+
     fuente_numero = ImageFont.truetype(FUENTE_MONTSERRAT, SIZE_FUENTE_NUMERO)
     fuente_campus = ImageFont.truetype(FUENTE_OPENSANS,   SIZE_FUENTE_SEDE)
+    color_blanco  = (255, 255, 255, 255)
+    ancho_max     = ANCHO_IMAGEN - MARGEN_LATERAL * 2
 
-    texto_numero = formatear_con_dos_puntos(numero)
-    bbox_n   = draw.textbbox((0, 0), texto_numero, font=fuente_numero)
+    texto_numero = str(numero)
+    bbox_n   = _DUMMY_DRAW.textbbox((0, 0), texto_numero, font=fuente_numero)
     x_numero = X_NUMERO - (bbox_n[2] - bbox_n[0]) // 2
 
+    # Un solo contexto Pilmoji por imagen
     with Pilmoji(img, source=GoogleEmojiSource) as pilmoji:
+
+        # Número
         pilmoji.text((x_numero, Y_NUMERO), texto_numero, font=fuente_numero, fill=color_blanco)
 
+        # Campus (solo Default)
         if nombre_plantilla == "Default" and sede_custom:
-            bbox_c   = draw.textbbox((0, 0), sede_custom, font=fuente_campus)
+            bbox_c   = _DUMMY_DRAW.textbbox((0, 0), sede_custom, font=fuente_campus)
             x_campus = X_CAMPUS - (bbox_c[2] - bbox_c[0]) // 2
             pilmoji.text((x_campus, Y_CAMPUS), sede_custom, font=fuente_campus, fill=color_blanco)
 
-def escribir_texto(img, draw, lineas, fuente, color, y_inicial):
-    y_actual = y_inicial
-    with Pilmoji(img, source=GoogleEmojiSource) as pilmoji:
+        # Confesión
+        y_actual = Y_CONFESION
         for linea in lineas:
-            bbox = draw.textbbox((0, 0), linea, font=fuente)
+            bbox = _DUMMY_DRAW.textbbox((0, 0), linea, font=fuente)
             x    = (ANCHO_IMAGEN - (bbox[2] - bbox[0])) // 2
-            pilmoji.text((x, y_actual), linea, font=fuente, fill=color)
+            pilmoji.text((x, y_actual), linea, font=fuente, fill=color_confesion)
             y_actual += (bbox[3] - bbox[1]) + 10
+
+    # Adjunto (si aplica)
+    if adjunto and y_adjunto_desde:
+        espacio_h = ancho_max
+        espacio_v = Y_LIMITE_INFERIOR_CONFESION - y_adjunto_desde
+        copia = adjunto.copy()
+        copia.thumbnail((espacio_h, espacio_v), Image.Resampling.LANCZOS)
+        pos_x = (ANCHO_IMAGEN - copia.width)  // 2
+        pos_y = y_adjunto_desde + (espacio_v  - copia.height) // 2
+        img.alpha_composite(copia, (pos_x, pos_y))
+
+    return img
 
 # =========================
 # FUNCIÓN PRINCIPAL
@@ -120,74 +144,60 @@ def generar_imagen(nombre_plantilla, numero, confesion,
 
     # --- CASO 1: Sin adjunto válido ---
     if not ruta_adjunto:
-        img  = Image.open(ruta_plantilla).convert("RGBA")
-        draw = ImageDraw.Draw(img)
-        dibujar_base(img, draw, nombre_plantilla, numero, sede_custom)
         f, l = ajustar_fuente_confesion(
             confesion, FUENTE_OPENSANS_XB,
             ancho_max, Y_CONFESION, Y_LIMITE_INFERIOR_CONFESION, SIZE_FUENTE_CONFESION
         )
-        escribir_texto(img, draw, l, f, color_confesion, Y_CONFESION)
+        img = _componer_imagen(ruta_plantilla, nombre_plantilla, numero,
+                               sede_custom, l, f, color_confesion,
+                               Y_LIMITE_INFERIOR_CONFESION)
         nombre_archivo = (
             f"Confesion {numero} (Formato no disponible, configurar en Canva).png"
-            if requiere_canva else
-            f"Confesion {numero}.png"
+            if requiere_canva else f"Confesion {numero}.png"
         )
         img.save(f"Confesiones/{nombre_archivo}")
 
     # --- CASO 2: Con adjunto válido → V1, V2(1), V2(2) ---
     else:
-        # V1: texto arriba, imagen abajo
-        img_v1  = Image.open(ruta_plantilla).convert("RGBA")
-        draw_v1 = ImageDraw.Draw(img_v1)
-        dibujar_base(img_v1, draw_v1, nombre_plantilla, numero, sede_custom)
-        f_v1, l_v1 = ajustar_fuente_confesion(
+        adjunto = Image.open(ruta_adjunto).convert("RGBA")
+
+        # Calcular fuentes UNA sola vez y reutilizar
+        f_mitad, l_mitad = ajustar_fuente_confesion(
             confesion, FUENTE_OPENSANS_XB,
             ancho_max, Y_CONFESION, Y_MITAD - 20, SIZE_FUENTE_CONFESION
         )
-        escribir_texto(img_v1, draw_v1, l_v1, f_v1, color_confesion, Y_CONFESION)
-        adjunto = Image.open(ruta_adjunto).convert("RGBA")
-        espacio_h = ancho_max
-        espacio_v = Y_LIMITE_INFERIOR_CONFESION - Y_MITAD
-        adjunto.thumbnail((espacio_h, espacio_v), Image.Resampling.LANCZOS)
-        pos_x = (ANCHO_IMAGEN - adjunto.width)  // 2
-        pos_y = Y_MITAD + (espacio_v - adjunto.height) // 2
-        img_v1.alpha_composite(adjunto, (pos_x, pos_y))
-        img_v1.save(f"Confesiones/Confesion {numero} V1.png")
-
-        # V2(1): solo confesión
-        img_v2_1  = Image.open(ruta_plantilla).convert("RGBA")
-        draw_v2_1 = ImageDraw.Draw(img_v2_1)
-        dibujar_base(img_v2_1, draw_v2_1, nombre_plantilla, numero, sede_custom)
-        f_v2, l_v2 = ajustar_fuente_confesion(
+        f_completo, l_completo = ajustar_fuente_confesion(
             confesion, FUENTE_OPENSANS_XB,
             ancho_max, Y_CONFESION, Y_LIMITE_INFERIOR_CONFESION, SIZE_FUENTE_CONFESION
         )
-        escribir_texto(img_v2_1, draw_v2_1, l_v2, f_v2, color_confesion, Y_CONFESION)
+
+        # V1: texto arriba + imagen abajo
+        img_v1 = _componer_imagen(ruta_plantilla, nombre_plantilla, numero,
+                                  sede_custom, l_mitad, f_mitad, color_confesion,
+                                  Y_MITAD - 20, adjunto=adjunto, y_adjunto_desde=Y_MITAD)
+        img_v1.save(f"Confesiones/Confesion {numero} V1.png")
+
+        # V2(1): solo confesión completa
+        img_v2_1 = _componer_imagen(ruta_plantilla, nombre_plantilla, numero,
+                                    sede_custom, l_completo, f_completo, color_confesion,
+                                    Y_LIMITE_INFERIOR_CONFESION)
         img_v2_1.save(f"Confesiones/Confesion {numero} V2 (1).png")
 
-        # V2(2): solo imagen centrada
-        img_v2_2  = Image.open(ruta_plantilla).convert("RGBA")
-        draw_v2_2 = ImageDraw.Draw(img_v2_2)
-        dibujar_base(img_v2_2, draw_v2_2, nombre_plantilla, numero, sede_custom)
-        adjunto_v2 = Image.open(ruta_adjunto).convert("RGBA")
-        adjunto_v2.thumbnail(
-            (ancho_max, Y_LIMITE_INFERIOR_CONFESION - Y_CONFESION),
-            Image.Resampling.LANCZOS
-        )
-        pos_x2 = (ANCHO_IMAGEN - adjunto_v2.width) // 2
-        pos_y2 = Y_CONFESION + ((Y_LIMITE_INFERIOR_CONFESION - Y_CONFESION) - adjunto_v2.height) // 2
-        img_v2_2.alpha_composite(adjunto_v2, (pos_x2, pos_y2))
+        # V2(2): solo imagen centrada (sin texto de confesión)
+        img_v2_2 = _componer_imagen(ruta_plantilla, nombre_plantilla, numero,
+                                    sede_custom, [], f_completo, color_confesion,
+                                    Y_LIMITE_INFERIOR_CONFESION,
+                                    adjunto=adjunto, y_adjunto_desde=Y_CONFESION)
         img_v2_2.save(f"Confesiones/Confesion {numero} V2 (2).png")
 
 # =========================
 # CONFIGURACIÓN DE SESIÓN
 # =========================
 def indecision(df, id_target, accion_texto):
-    fila = df[df["id_csv"] == id_target-2]
+    fila = df[df["id_csv"] == id_target - 2]
     if not fila.empty:
-        texto   = str(fila.iloc[0]["confesion"]).strip()
-        resumen = (texto[:70] + "...") if len(texto) > 70 else texto
+        texto    = str(fila.iloc[0]["confesion"]).strip()
+        resumen  = (texto[:70] + "...") if len(texto) > 70 else texto
         confirma = input(
             f'\n¿Quieres {accion_texto} la confesión "{resumen}" (ID {id_target})? (S/N): '
         ).strip().upper()
@@ -199,7 +209,7 @@ def indecision(df, id_target, accion_texto):
 def las_pruebas(df):
     print("\n--- [LAS PRUEBAS: Configuración de Sesión] ---")
     print(f"   Total de filas disponibles: {len(df)}")
-    print(f"   Rango de IDs: {df['id_csv'].min()} → {df['id_csv'].max()}\n")
+    print(f"   Rango de IDs: {df['id_csv'].min() + 2} → {df['id_csv'].max() + 2}\n")
 
     # 1. Fila de inicio
     while True:
@@ -246,4 +256,4 @@ def las_pruebas(df):
             numero_base = 1
             break
 
-    return fila_inicio, rango, ignorados, numero_base
+    return fila_inicio - 2, rango, ignorados, numero_base

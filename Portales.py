@@ -1,26 +1,8 @@
-#Portales.py
+# Portales.py
 import pandas as pd
 import requests
 import os
 import glob
-
-def Plegarias():
-    SHEET_ID = "1Ep3ehmPODFXPms3gwp_JUHNF0YaSn7f7-sJcREWF1pM"
-    GID      = "1504952135"
-    URL      = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
-    
-    destino  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hoja_nueva.csv")
-    
-    print("Descargando hoja de cálculo...")
-    r = requests.get(URL, timeout=15)
-    
-    if r.status_code == 200:
-        with open(destino, "wb") as f:
-            f.write(r.content)
-        print(f"[OK] CSV descargado → {destino}")
-    else:
-        print(f"[WARN] No se pudo descargar el CSV (status {r.status_code}). Usando el que ya existe.")
-
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -41,57 +23,75 @@ def resolver_plantilla(sede):
             return valor, None
     return "Default", sede.strip()
 
+def Plegarias():
+    SHEET_ID = "1Ep3ehmPODFXPms3gwp_JUHNF0YaSn7f7-sJcREWF1pM"
+    GID      = "1504952135"
+    URL      = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
+    destino  = ruta("hoja_nueva.csv")
+
+    print("Descargando hoja de cálculo...")
+    try:
+        r = requests.get(URL, timeout=15)
+        if r.status_code == 200:
+            with open(destino, "wb") as f:
+                f.write(r.content)
+            print(f"[OK] CSV descargado → {destino}")
+        else:
+            print(f"[WARN] No se pudo descargar el CSV (status {r.status_code}). Usando el que ya existe.")
+    except Exception as e:
+        print(f"[WARN] Error de red: {e}. Usando el que ya existe.")
+
 def cognitotrofia():
-    csv_files = glob.glob(ruta("*.csv"))
+    COLUMNAS     = ["marca_temporal", "confesion", "imagen", "sede"]
+    maestra_path = ruta("La llave maestra.csv")
+    csv_files    = glob.glob(ruta("*.csv"))
+
     if not csv_files:
         raise Exception("No se encontró ningún archivo CSV.")
 
-    maestra_path = ruta("La llave maestra.csv")
-    COLUMNAS = ["marca_temporal", "confesion", "imagen", "sede"]
-
     def leer_csv(path):
-        df = pd.read_csv(
+        return pd.read_csv(
             path,
             encoding="utf-8",
             engine="python",
             names=COLUMNAS,
-            header=0,          # salta la primera fila (encabezado)
+            header=0,
             on_bad_lines="warn",
             dtype=str,
         )
-        # ⚠️ Asignar id_csv ANTES de cualquier limpieza,
-        # basado en la línea real del archivo (fila 1 = encabezado → datos empiezan en 2)
-        df.insert(0, "id_csv", range(3, len(df) + 3))
-        return df
 
-    if len(csv_files) == 1:
-        archivo = csv_files[0]
-        if archivo != maestra_path:
-            os.rename(archivo, maestra_path)
+    # Separar maestra de nuevos
+    nuevos = [f for f in csv_files if f != maestra_path]
+
+    if os.path.exists(maestra_path):
         df = leer_csv(maestra_path)
-
-    else:
-        if maestra_path in csv_files:
-            nuevo_csv = [f for f in csv_files if f != maestra_path][0]
-            df_maestra = leer_csv(maestra_path)
-            df_nuevo   = leer_csv(nuevo_csv)
-            df = pd.concat([df_maestra, df_nuevo], ignore_index=True)
+        # Fusionar con nuevos si los hay
+        for nuevo in nuevos:
+            df_nuevo = leer_csv(nuevo)
+            df = pd.concat([df, df_nuevo], ignore_index=True)
             df = df.drop_duplicates(subset=["marca_temporal", "confesion"], keep="first")
-            # Reasignar IDs en orden tras fusión
-            df["id_csv"] = range(1, len(df) + 1)
-            df.to_csv(maestra_path, index=False, header=True, encoding="utf-8")
-            os.remove(nuevo_csv)
-        else:
-            os.rename(csv_files[0], maestra_path)
-            df = leer_csv(maestra_path)
+            os.remove(nuevo)
+        df.to_csv(maestra_path, index=False, header=True, encoding="utf-8")
+    else:
+        # No existe maestra — renombrar el primero y fusionar el resto
+        os.rename(csv_files[0], maestra_path)
+        df = leer_csv(maestra_path)
+        for nuevo in nuevos[1:]:
+            df_nuevo = leer_csv(nuevo)
+            df = pd.concat([df, df_nuevo], ignore_index=True)
+            df = df.drop_duplicates(subset=["marca_temporal", "confesion"], keep="first")
+            os.remove(nuevo)
+        df.to_csv(maestra_path, index=False, header=True, encoding="utf-8")
 
-    # Limpiar filas completamente vacías DESPUÉS de asignar IDs
+    # Limpiar
     df = df.dropna(subset=["confesion", "sede"], how="all")
-    df["confesion"] = df["confesion"].fillna("")
-    df["sede"]      = df["sede"].fillna("")
-    df["imagen"]    = df["imagen"].fillna("")
+    df[["confesion", "sede", "imagen"]] = df[["confesion", "sede", "imagen"]].fillna("")
 
-    return df.reset_index(drop=True)
+    # ID limpio basado en posición real
+    df = df.reset_index(drop=True)
+    df.insert(0, "id_csv", range(1, len(df) + 1))
+
+    return df
 
 def convertir_drive(url):
     if "id=" in url:
@@ -120,8 +120,7 @@ def descargar(url, base_path):
 
 def eterno_retorno():
     carpetas = [ruta("Confesiones"), ruta("archivos")]
-    total = 0
-
+    total    = 0
     for carpeta in carpetas:
         if not os.path.exists(carpeta):
             continue
@@ -130,5 +129,4 @@ def eterno_retorno():
             if os.path.isfile(ruta_archivo):
                 os.remove(ruta_archivo)
                 total += 1
-
-    print(f"[OK] {total} archivos eliminados. Las carpetas siguen intactas.")
+    print(f"[OK] {total} archivos eliminados.")
