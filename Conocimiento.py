@@ -230,7 +230,7 @@ def las_pruebas(df):
         try:
             id_ignorar = int(entrada)
             if indecision(df, id_ignorar, "ignorar"):
-                ignorados.add(id_ignorar)
+                ignorados.add(id_ignorar - 2)
                 print(f"-> ID {id_ignorar} agregado a ignorados.\n")
             else:
                 print("-> Cancelado.\n")

@@ -1,7 +1,26 @@
+#Portales.py
 import pandas as pd
 import requests
 import os
 import glob
+
+def Plegarias():
+    SHEET_ID = "1Ep3ehmPODFXPms3gwp_JUHNF0YaSn7f7-sJcREWF1pM"
+    GID      = "1504952135"
+    URL      = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GID}"
+    
+    destino  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hoja_nueva.csv")
+    
+    print("Descargando hoja de cálculo...")
+    r = requests.get(URL, timeout=15)
+    
+    if r.status_code == 200:
+        with open(destino, "wb") as f:
+            f.write(r.content)
+        print(f"[OK] CSV descargado → {destino}")
+    else:
+        print(f"[WARN] No se pudo descargar el CSV (status {r.status_code}). Usando el que ya existe.")
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
