@@ -1,10 +1,11 @@
 import os
 from Conocimiento import generar_imagen, las_pruebas
-from Portales import ruta, resolver_plantilla, cognitotrofia, convertir_drive, descargar
+from Portales import ruta, resolver_plantilla, cognitotrofia, convertir_drive, descargar, eterno_retorno
 
 
 os.makedirs(ruta("archivos"), exist_ok=True)
 os.makedirs(ruta("Confesiones"), exist_ok=True)
+eterno_retorno()
 
 # 1. Cargar y actualizar datos
 df = cognitotrofia()
