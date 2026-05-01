@@ -71,10 +71,15 @@ def ajustar_fuente_confesion(texto, fuente_path, ancho_max, y_inicio, y_limite, 
     fuente = ImageFont.truetype(fuente_path, 8)
     return fuente, dividir_texto_en_lineas(texto, fuente, ancho_max)
 
-def formatear_con_dos_puntos(n) -> str:
-    s = str(n)
-    # Agrupa de derecha a izquierda en pares separados por ":"
-    return ":".join(s[max(0, i-2):i] for i in range(len(s), 0, -2))[::-1].replace(":", "")[::-1] or s
+def formatear_con_dos_puntos(s: str) -> str:
+    s = str(s)
+    grupos = []
+    i = len(s)
+    while i > 0:
+        grupos.append(s[max(0, i-2):i])
+        i -= 2
+    grupos.reverse()
+    return ":".join(grupos)
 
 def _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom,
                      lineas, fuente, color_confesion, y_confesion_limite,
@@ -91,7 +96,7 @@ def _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom,
     color_blanco  = (255, 255, 255, 255)
     ancho_max     = ANCHO_IMAGEN - MARGEN_LATERAL * 2
 
-    texto_numero = str(numero)
+    texto_numero = formatear_con_dos_puntos(numero)
     bbox_n   = _DUMMY_DRAW.textbbox((0, 0), texto_numero, font=fuente_numero)
     x_numero = X_NUMERO - (bbox_n[2] - bbox_n[0]) // 2
 
