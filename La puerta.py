@@ -1,7 +1,7 @@
 # La puerta.py
 import os
-from Conocimiento import generar_imagen, las_pruebas
-from Portales import ruta, resolver_plantilla, cognitotrofia, convertir_drive, descargar, Plegarias
+from Conocimiento import *
+from Portales import *
 
 Plegarias()
 
