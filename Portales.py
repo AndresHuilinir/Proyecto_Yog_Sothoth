@@ -130,3 +130,6 @@ def eterno_retorno():
                 os.remove(ruta_archivo)
                 total += 1
     print(f"[OK] {total} archivos eliminados.")
+                os.remove(ruta_archivo)
+                total += 1
+    print(f"[OK] {total} archivos eliminados.")
