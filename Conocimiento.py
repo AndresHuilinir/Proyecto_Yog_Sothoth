@@ -1,7 +1,9 @@
+# Conocimiento.py
 from PIL import Image, ImageDraw, ImageFont
 from pilmoji import Pilmoji
 from pilmoji.source import GoogleEmojiSource
 import os
+import re
 from Orden_universal import (
     Y_NUMERO, Y_CAMPUS, Y_CONFESION, X_NUMERO, X_CAMPUS,
     MARGEN_LATERAL, ANCHO_IMAGEN, SIZE_FUENTE_NUMERO, SIZE_FUENTE_SEDE,
@@ -12,6 +14,28 @@ from Orden_universal import (
 
 _DUMMY_IMG  = Image.new("RGB", (1, 1))
 _DUMMY_DRAW = ImageDraw.Draw(_DUMMY_IMG)
+
+_PATRON_EMOJI = re.compile(
+    "["
+    "\U0001F600-\U0001FFFF"
+    "\U00002702-\U000027B0"
+    "\U000024C2-\U0001F251"
+    "\u2640-\u2642"
+    "\u2600-\u2B55"
+    "\u200d\u23cf\u23e9\u231a\ufe0f\u3030"
+    "]+",
+    flags=re.UNICODE,
+)
+
+# =========================
+# FUNCIONES AUXILIARES
+# =========================
+def _pilmoji_text_seguro(pilmoji, draw, pos, texto, font, fill):
+    try:
+        pilmoji.text(pos, texto, font=font, fill=fill)
+    except Exception:
+        texto_limpio = _PATRON_EMOJI.sub("", texto).strip()
+        draw.text(pos, texto_limpio, font=font, fill=fill)
 
 def dividir_texto_en_lineas(texto, fuente, ancho_max):
     palabras = texto.split()
@@ -68,18 +92,21 @@ def _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom,
     x_numero = X_NUMERO - (bbox_n[2] - bbox_n[0]) // 2
 
     with Pilmoji(img, source=GoogleEmojiSource) as pilmoji:
-        pilmoji.text((x_numero, Y_NUMERO), texto_numero, font=fuente_numero, fill=COLOR_BLANCO)
+        _pilmoji_text_seguro(pilmoji, draw,
+                             (x_numero, Y_NUMERO), texto_numero, fuente_numero, COLOR_BLANCO)
 
         if nombre_plantilla == "Default" and sede_custom:
             bbox_c   = _DUMMY_DRAW.textbbox((0, 0), sede_custom, font=fuente_campus)
             x_campus = X_CAMPUS - (bbox_c[2] - bbox_c[0]) // 2
-            pilmoji.text((x_campus, Y_CAMPUS), sede_custom, font=fuente_campus, fill=COLOR_BLANCO)
+            _pilmoji_text_seguro(pilmoji, draw,
+                                 (x_campus, Y_CAMPUS), sede_custom, fuente_campus, COLOR_BLANCO)
 
         y_actual = Y_CONFESION
         for linea in lineas:
             bbox = _DUMMY_DRAW.textbbox((0, 0), linea, font=fuente)
             x    = (ANCHO_IMAGEN - (bbox[2] - bbox[0])) // 2
-            pilmoji.text((x, y_actual), linea, font=fuente, fill=color_confesion)
+            _pilmoji_text_seguro(pilmoji, draw,
+                                 (x, y_actual), linea, fuente, color_confesion)
             y_actual += (bbox[3] - bbox[1]) + 10
 
     if adjunto and y_adjunto_desde:
@@ -93,6 +120,9 @@ def _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom,
 
     return img
 
+# =========================
+# FUNCIÓN PRINCIPAL
+# =========================
 def generar_imagen(nombre_plantilla, numero, confesion,
                    sede_custom=None, ruta_adjunto=None, requiere_canva=False):
     os.makedirs("Confesiones", exist_ok=True)
@@ -143,3 +173,67 @@ def generar_imagen(nombre_plantilla, numero, confesion,
                          [], f_completo, color_confesion,
                          adjunto=adjunto, y_adjunto_desde=Y_CONFESION
                          ).save(f"Confesiones/Confesion {numero} V2 (2).png")
+
+# =========================
+# CONFIGURACIÓN DE SESIÓN
+# =========================
+def indecision(df, id_target, accion_texto):
+    fila = df[df["id_csv"] == id_target]
+    if not fila.empty:
+        texto    = str(fila.iloc[0]["confesion"]).strip()
+        resumen  = (texto[:70] + "...") if len(texto) > 70 else texto
+        confirma = input(
+            f'\n¿Quieres {accion_texto} la confesión "{resumen}" (ID {id_target})? (S/N): '
+        ).strip().upper()
+        return confirma == "S"
+    else:
+        print(f"-> Error: No se encontró el ID {id_target}.")
+        return False
+
+def las_pruebas(df):
+    print("\n--- [LAS PRUEBAS: Configuración de Sesión] ---")
+    print(f"   Total de filas disponibles: {len(df)}")
+    print(f"   Rango de IDs: {df['id_csv'].min()} → {df['id_csv'].max()}\n")
+
+    while True:
+        try:
+            fila_inicio = int(input("¿Desde qué ID deseas comenzar?: "))
+            if indecision(df, fila_inicio, "comenzar desde"):
+                break
+        except ValueError:
+            print("Ingresa un número válido.")
+
+    while True:
+        try:
+            rango = int(input("\n¿Cuántas confesiones procesar?: "))
+            if rango >= 1:
+                break
+            print("Debe ser 1 o mayor.")
+        except ValueError:
+            print("Ingresa un número válido.")
+
+    ignorados = set()
+    print("\n--- Modo Ignorar ---")
+    while True:
+        entrada = input("ID a ignorar (X para terminar): ").strip().upper()
+        if entrada == "X":
+            break
+        try:
+            id_ignorar = int(entrada)
+            if indecision(df, id_ignorar, "ignorar"):
+                ignorados.add(id_ignorar)
+                print(f"-> ID {id_ignorar} agregado a ignorados.\n")
+            else:
+                print("-> Cancelado.\n")
+        except ValueError:
+            print("Ingresa un número válido o X para terminar.")
+
+    while True:
+        try:
+            numero_base = int(input("\n¿Con qué número visual quieres empezar?: "))
+            break
+        except ValueError:
+            numero_base = 1
+            break
+
+    return fila_inicio, rango, ignorados, numero_base

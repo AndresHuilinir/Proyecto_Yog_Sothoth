@@ -1,14 +1,10 @@
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-OFFSET_ID = 2
 
 def ruta(path):
     return os.path.join(BASE_DIR, path)
 
-# =========================
-# DISEÑO
-# =========================
 Y_NUMERO    = 33
 Y_CAMPUS    = 93
 Y_CONFESION = 210
@@ -23,16 +19,10 @@ SIZE_FUENTE_CONFESION       = 47
 Y_LIMITE_INFERIOR_CONFESION = 1000
 Y_MITAD                     = 540
 
-# =========================
-# FUENTES
-# =========================
 FUENTE_MONTSERRAT  = "Caligrafía/Montserrat/static/Montserrat-Regular.ttf"
 FUENTE_OPENSANS    = "Caligrafía/Open_Sans/static/OpenSans-Regular.ttf"
 FUENTE_OPENSANS_XB = "Caligrafía/Open_Sans/static/OpenSans-ExtraBold.ttf"
 
-# =========================
-# COLORES
-# =========================
 COLOR_BLANCO = (255, 255, 255, 255)
 
 COLORES_CONFESION = {
@@ -44,9 +34,6 @@ COLORES_CONFESION = {
     "Default": (0,   0,   0,   255),
 }
 
-# =========================
-# SEDES
-# =========================
 MAPA_SEDES = {
     "🏛️ San Joaquín": "SJ",
     "🚢 Casa Central": "CC",
