@@ -125,9 +125,9 @@
     &quot;accountId&quot;: &quot;a6741461-574b-4ab5-a1cd-edd197b80c1e&quot;
   }
 }</component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 6
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
   <component name="ProjectId" id="3DeNpZa3pajjAU7QINDszDWtv1W" />
   <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="2" id="Add" />
