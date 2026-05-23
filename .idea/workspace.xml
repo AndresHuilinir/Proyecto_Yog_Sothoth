@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="d9871098-b642-4f49-8a4e-24f3ee8216f1" name="Changes" comment="Evocación">
+      <change afterPath="$PROJECT_DIR$/INSTALAR_MAC_LINUX.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/INSTALAR_WINDOWS.bat" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Motor/requirements.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/Proyecto_Yog_Sothoth.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/Montserrat-Italic-VariableFont_wght.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/Montserrat-VariableFont_wght.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/OFL.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/README.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-Black.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-BlackItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-Bold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-BoldItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-ExtraBold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-ExtraBoldItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-ExtraLight.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-ExtraLightItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-Italic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-Light.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-LightItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-Medium.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-MediumItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-Regular.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-SemiBold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-SemiBoldItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-Thin.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Montserrat/static/Montserrat-ThinItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Noto_Color_Emoji/NotoColorEmoji-Regular.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Noto_Color_Emoji/OFL.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/OFL.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/OpenSans-Italic-VariableFont_wdth,wght.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/README.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans-Bold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans-BoldItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans-ExtraBold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans-ExtraBoldItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans-Italic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans-Light.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans-LightItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans-Medium.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans-MediumItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans-Regular.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans-SemiBold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans-SemiBoldItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_Condensed-Bold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_Condensed-BoldItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_Condensed-ExtraBold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_Condensed-ExtraBoldItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_Condensed-Italic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_Condensed-Light.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_Condensed-LightItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_Condensed-Medium.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_Condensed-MediumItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_Condensed-Regular.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_Condensed-SemiBold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_Condensed-SemiBoldItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_SemiCondensed-Bold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_SemiCondensed-BoldItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_SemiCondensed-ExtraBold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_SemiCondensed-ExtraBoldItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_SemiCondensed-Italic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_SemiCondensed-Light.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_SemiCondensed-LightItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_SemiCondensed-Medium.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_SemiCondensed-MediumItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_SemiCondensed-Regular.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_SemiCondensed-SemiBold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Caligrafía/Open_Sans/static/OpenSans_SemiCondensed-SemiBoldItalic.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Conocimiento.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Erudito a prueba.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Interfaz.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/La llave maestra.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/La_puerta.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Lanzar.bat" beforeDir="false" afterPath="$PROJECT_DIR$/Lanzar.bat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Orden_universal.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Plantillas/CC.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Plantillas/Conce.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Plantillas/Default.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Plantillas/SJ.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Plantillas/Vita.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Plantillas/Viña.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Portales.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Purificacion.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Rezos.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Ritual.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/crear_acceso.py" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;AndresHuilinir&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/AndresHuilinir/Proyecto_Yog_Sothoth.git&quot;,
+    &quot;accountId&quot;: &quot;a6741461-574b-4ab5-a1cd-edd197b80c1e&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 6
+}]]></component>
+  <component name="ProjectId" id="3DeNpZa3pajjAU7QINDszDWtv1W" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_MARK_IGNORED_FILES_AS_EXCLUDED&quot;: &quot;true&quot;,
+    &quot;Python.Ritual.executor&quot;: &quot;Run&quot;,
+    &quot;Python.crear_acceso.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/andre/IdeaProjects/Proyecto_Yog_Sothoth&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;
+  }
+}</component>
+  <component name="RunManager">
+    <configuration name="Ritual" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="Proyecto_Yog_Sothoth" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Ritual.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="d9871098-b642-4f49-8a4e-24f3ee8216f1" name="Changes" comment="" />
+      <created>1778638789707</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1778638789707</updated>
+    </task>
+    <task id="LOCAL-00001" summary="Evocación">
+      <option name="closed" value="true" />
+      <created>1779510029628</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1779510029628</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
+    <servers />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.fileTypeFactory" implementationName="*.bat" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Evocación" />
+    <option name="LAST_COMMIT_MESSAGE" value="Evocación" />
+  </component>
+</project>
