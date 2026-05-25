@@ -2,4 +2,4 @@ pandas
 requests
 Pillow
 pilmoji
-moviepy
+moviepy==1.0.3

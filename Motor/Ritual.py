@@ -4,6 +4,9 @@ from Portales import cognitotrofia, resolver_plantilla
 from Rezos import Plegarias, convertir_drive, descargar
 from Purificacion import eterno_retorno
 from Orden_universal import ruta
+from PIL import Image
+if not hasattr(Image, 'ANTIALIAS'):
+    Image.ANTIALIAS = Image.Resampling.LANCZOS
 
 MODO = "visual"  # "visual" o "consola"
 

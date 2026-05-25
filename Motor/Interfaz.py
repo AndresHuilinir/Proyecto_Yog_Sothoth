@@ -4,7 +4,8 @@ import os
 from Conocimiento import generar_imagen
 from Portales import resolver_plantilla
 from Rezos import convertir_drive, descargar
-from Orden_universal import ruta
+from Orden_universal import ruta, CARPETA_CONFESIONES
+import threading
 
 UMBRAL_ARRASTRE = 80
 
@@ -214,22 +215,46 @@ class InterfazTinder:
         self.root.mainloop()
 
     def _cargar_confesion(self):
+        self.variantes = []
+        self.lbl_direccion.config(text="")
+
+        # Limpiar avisos de formato del turno anterior
+        for w in self.frame_formato.winfo_children():
+            w.destroy()
+
         if self.idx_actual >= len(self.df):
             self._finalizar()
             return
 
-        self.variantes = []
-        self.tk_imgs   = []
-        self.lbl_direccion.config(text="")
-
-        for w in self.frame_formato.winfo_children():
-            w.destroy()
-
         row           = self.df.iloc[self.idx_actual]
         numero_visual = self.numero_visual_actual
+
+        # Mostrar indicador de carga mientras se procesa
+        self.canvas.delete("all")
+        self.canvas.create_text(
+            self.CANVAS_W // 2, self.CANVAS_H // 2,
+            text="⏳ Generando...", fill="white",
+            font=("Helvetica", max(12, int(18 * self.sc)), "bold"),
+            tags="cargando"
+        )
+        self.lbl_contador.config(
+            text=f"Confesión {self.idx_actual + 1} de {len(self.df)}"
+                 f"  |  ✅ {self.aceptadas}  ❌ {self.ignoradas}"
+        )
+        self.lbl_variante.config(text="")
+
+        t = threading.Thread(
+            target=self._procesar_en_hilo,
+            args=(row, numero_visual),
+            daemon=True
+        )
+        t.start()
+
+    def _procesar_en_hilo(self, row, numero_visual):
+        """Corre fuera del hilo principal: genera la imagen/video."""
         plantilla, sede_custom = resolver_plantilla(str(row["sede"]))
-        confesion     = str(row["confesion"])
-        link_drive    = str(row["imagen"]).strip()
+        confesion    = str(row["confesion"])
+        link_drive   = str(row["imagen"]).strip()
 
         ruta_adjunto   = None
         requiere_canva = False
@@ -246,6 +271,15 @@ class InterfazTinder:
                 elif resultado:
                     ruta_adjunto = resultado
 
+        if ruta_adjunto and os.path.splitext(ruta_adjunto)[1].lower() in [".mp4", ".mov", ".webm", ".avi"]:
+            self.root.after(0, lambda: self.canvas.create_text(
+                self.CANVAS_W // 2, self.CANVAS_H // 2 + int(50 * self.sc),
+                text="🎬 Procesando video, puede tardar unos minutos...",
+                fill="#ffcc00",
+                font=("Helvetica", max(8, int(11 * self.sc))),
+                tags="cargando"
+            ))
+
         try:
             generar_imagen(
                 nombre_plantilla = plantilla,
@@ -257,11 +291,15 @@ class InterfazTinder:
             )
         except Exception as e:
             print(f"[ERROR] Generando confesión {numero_visual}: {e}")
-            self.idx_actual += 1
-            self._cargar_confesion()
+            # No auto-saltar: mostrar al usuario para que evalúe
+            self.root.after(0, self._mostrar_resultado, [], formato_aviso, confesion, True)
             return
 
-        base       = f"Confesiones/Confesion {numero_visual}"
+        # ── CORRECCIÓN PRINCIPAL ──────────────────────────────────────────────
+        # Usar CARPETA_CONFESIONES (ruta absoluta desde Orden_universal)
+        # en lugar de la ruta relativa "Confesiones/..." que no coincide.
+        # ─────────────────────────────────────────────────────────────────────
+        base = os.path.join(CARPETA_CONFESIONES, f"Confesion {numero_visual}")
         candidatos = [
             f"{base}.png",
             f"{base} (Formato no disponible, configurar en Canva).png",
@@ -273,14 +311,13 @@ class InterfazTinder:
             f"{base} V2 (2).gif",
             f"{base} V2 (2).mp4",
         ]
-        for c in candidatos:
-            if os.path.exists(c):
-                self.variantes.append(c)
+        variantes = [c for c in candidatos if os.path.exists(c)]
 
-        if not self.variantes:
-            self.idx_actual += 1
-            self._cargar_confesion()
-            return
+        self.root.after(0, self._mostrar_resultado, variantes, formato_aviso, confesion, False)
+
+    def _mostrar_resultado(self, variantes, formato_aviso, confesion_texto, hubo_error):
+        """Corre en el hilo principal de tkinter para actualizar la UI."""
+        self.variantes = variantes
 
         self.lbl_contador.config(
             text=f"Confesión {self.idx_actual + 1} de {len(self.df)}"
@@ -290,7 +327,47 @@ class InterfazTinder:
         if formato_aviso:
             WidgetFormato(self.frame_formato, formato_aviso, self.sc)
 
+        if not self.variantes:
+            # Sin imagen pero el usuario igual evalúa: mostrar texto de la confesión
+            self._mostrar_sin_imagen(confesion_texto, hubo_error)
+            return
+
         self._mostrar_variantes()
+
+    def _mostrar_sin_imagen(self, texto, hubo_error):
+        """Muestra la confesión en texto cuando no hay archivos de imagen."""
+        cw = self.CANVAS_W
+        ch = self.CANVAS_H
+        sc = self.sc
+        self.canvas.delete("all")
+        self.tk_imgs = []
+
+        self.canvas.create_rectangle(0, 0, cw, ch, fill="#1a1a2e", outline="")
+
+        if hubo_error:
+            aviso       = "⚠️ Error al generar imagen — evalúa el texto"
+            color_aviso = "#ff4466"
+        else:
+            aviso       = "⚠️ Sin imagen generada — evalúa el texto"
+            color_aviso = "#ffcc00"
+
+        self.canvas.create_text(
+            cw // 2, int(ch * 0.18),
+            text=aviso,
+            fill=color_aviso,
+            font=("Helvetica", max(9, int(12*sc)), "bold"),
+            tags="imagen"
+        )
+        self.canvas.create_text(
+            cw // 2, int(ch * 0.52),
+            text=texto,
+            fill="white",
+            font=("Helvetica", max(9, int(12*sc))),
+            width=int(cw * 0.85),
+            justify="center",
+            tags="imagen"
+        )
+        self.lbl_variante.config(text="Sin archivos — evalúa igualmente con arrastre")
 
     def _thumb(self, ruta_img, max_w, max_h):
         ext = os.path.splitext(ruta_img)[1].lower()
@@ -381,7 +458,8 @@ class InterfazTinder:
         if not self.arrastrando:
             return
         self.offset_x = event.x - self.x_inicio
-        self._mostrar_variantes(dx=self.offset_x)
+        if self.variantes:
+            self._mostrar_variantes(dx=self.offset_x)
         if self.offset_x > UMBRAL_ARRASTRE:
             self.lbl_direccion.config(text="✅", fg="#00ff88")
         elif self.offset_x < -UMBRAL_ARRASTRE:
@@ -398,7 +476,8 @@ class InterfazTinder:
         elif self.offset_x < -UMBRAL_ARRASTRE:
             self._accion_izquierda()
         else:
-            self._mostrar_variantes()
+            if self.variantes:
+                self._mostrar_variantes()
             self.lbl_direccion.config(text="")
 
     def _accion_derecha(self):
