@@ -1,9 +1,12 @@
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OFFSET_ID = 2
 
 def ruta(path):
     return os.path.join(BASE_DIR, path)
+
+CARPETA_CONFESIONES = os.path.join(os.path.dirname(BASE_DIR), "Confesiones")
 
 Y_NUMERO    = 33
 Y_CAMPUS    = 93
