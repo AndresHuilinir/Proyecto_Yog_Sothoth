@@ -86,6 +86,12 @@ if errorlevel 1 (
 if not exist "%~dp0.git" (
     echo [!] No se encontro repositorio git.
     echo     Clonando desde GitHub...
+
+    :: Limpiar intento anterior si existe
+    if exist "%~dp0temp_clone" (
+        rmdir /S /Q "%~dp0temp_clone"
+    )
+
     git clone https://github.com/TU_USUARIO/TU_REPO.git "%~dp0temp_clone"
     if errorlevel 1 (
         echo [ERROR] No se pudo clonar el repositorio.
