@@ -110,18 +110,27 @@ class PantallaInicio:
     def _actualizar(self):
         self.lbl_update.config(text="Verificando...", fg="#ffcc00")
         self.root.update()
+
+        env_sin_auth = os.environ.copy()
+        env_sin_auth["GIT_TERMINAL_PROMPT"] = "0"
+        env_sin_auth["GIT_ASKPASS"]         = "echo"
+        env_sin_auth["GIT_SSH_COMMAND"]     = "ssh -o BatchMode=yes"
+
         try:
             fetch = subprocess.run(
                 ["git", "fetch", "origin", "main"],
-                cwd=ROOT_DIR, capture_output=True, text=True, timeout=30
+                cwd=ROOT_DIR, capture_output=True, text=True,
+                timeout=30, env=env_sin_auth
             )
             if fetch.returncode != 0:
-                self.lbl_update.config(text="⚠️ Error de conexión.", fg="#ff4466")
+                error_real = (fetch.stderr.strip() or fetch.stdout.strip())[:80]
+                self.lbl_update.config(text=f"⚠️ {error_real}", fg="#ff4466")
                 return
 
             diff = subprocess.run(
                 ["git", "log", "HEAD..origin/main", "--oneline"],
-                cwd=ROOT_DIR, capture_output=True, text=True
+                cwd=ROOT_DIR, capture_output=True, text=True,
+                env=env_sin_auth
             )
             cambios = diff.stdout.strip()
 
@@ -135,8 +144,7 @@ class PantallaInicio:
             ventana.geometry("500x300")
 
             tk.Label(
-                ventana,
-                text="Se encontraron estos cambios:",
+                ventana, text="Se encontraron estos cambios:",
                 bg="#1a1a2e", fg="white",
                 font=("Helvetica", 12, "bold")
             ).pack(pady=(20, 10))
@@ -153,8 +161,11 @@ class PantallaInicio:
 
             def confirmar():
                 ventana.destroy()
-                subprocess.run(["git", "pull", "origin", "main"],
-                               cwd=ROOT_DIR, capture_output=True, text=True)
+                subprocess.run(
+                    ["git", "pull", "origin", "main"],
+                    cwd=ROOT_DIR, capture_output=True, text=True,
+                    env=env_sin_auth
+                )
                 self.lbl_update.config(
                     text="✅ Actualizado. Reinicia para aplicar.",
                     fg="#00ff88"
@@ -182,60 +193,59 @@ class PantallaInicio:
             self.lbl_update.config(text="⚠️ Tiempo agotado. Revisa tu conexión.", fg="#ff4466")
         except Exception as e:
             self.lbl_update.config(text=f"⚠️ Error: {str(e)[:60]}", fg="#ff4466")
+        def _buscar(self):
+            for w in self.frame_resultados.winfo_children():
+                w.destroy()
+            self.lbl_error.config(text="")
 
-    def _buscar(self):
-        for w in self.frame_resultados.winfo_children():
-            w.destroy()
-        self.lbl_error.config(text="")
+            fragmento = self.entry_busq.get().strip().lower()
+            if not fragmento:
+                self.lbl_error.config(text="Escribe algo para buscar.")
+                return
 
-        fragmento = self.entry_busq.get().strip().lower()
-        if not fragmento:
-            self.lbl_error.config(text="Escribe algo para buscar.")
-            return
+            coincidencias = self.df[self.df["confesion"].str.lower().str.contains(fragmento, na=False)]
 
-        coincidencias = self.df[self.df["confesion"].str.lower().str.contains(fragmento, na=False)]
+            if coincidencias.empty:
+                self.lbl_error.config(text="No se encontraron coincidencias. Intenta con otro fragmento.")
+                return
 
-        if coincidencias.empty:
-            self.lbl_error.config(text="No se encontraron coincidencias. Intenta con otro fragmento.")
-            return
+            ultimas = coincidencias.tail(3)
 
-        ultimas = coincidencias.tail(3)
+            if len(coincidencias) > 1:
+                tk.Label(
+                    self.frame_resultados,
+                    text=f"Se encontraron {len(coincidencias)} coincidencias. Últimas 3:",
+                    bg="#1a1a2e", fg="#aaaaaa", font=self.f_result
+                ).pack(anchor="w", pady=(0, int(4*self.sc)))
 
-        if len(coincidencias) > 1:
-            tk.Label(
-                self.frame_resultados,
-                text=f"Se encontraron {len(coincidencias)} coincidencias. Últimas 3:",
-                bg="#1a1a2e", fg="#aaaaaa", font=self.f_result
-            ).pack(anchor="w", pady=(0, int(4*self.sc)))
+            for _, row in ultimas.iterrows():
+                texto   = str(row["confesion"]).strip()
+                resumen = (texto[:90] + "...") if len(texto) > 90 else texto
+                idx     = int(row["id_csv"]) - 1
 
-        for _, row in ultimas.iterrows():
-            texto   = str(row["confesion"]).strip()
-            resumen = (texto[:90] + "...") if len(texto) > 90 else texto
-            idx     = int(row["id_csv"]) - 1
+                btn = tk.Button(
+                    self.frame_resultados,
+                    text=f'[ID {row["id_csv"]}]  {resumen}',
+                    bg="#16213e", fg="white", font=self.f_result,
+                    relief="flat", wraplength=int(480*self.sc),
+                    justify="left", cursor="hand2",
+                    padx=int(8*self.sc), pady=int(6*self.sc),
+                    command=lambda i=idx: self._seleccionar(i)
+                )
+                btn.pack(fill="x", pady=int(2*self.sc))
+                btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#2a2a5e"))
+                btn.bind("<Leave>", lambda e, b=btn: b.config(bg="#16213e"))
 
-            btn = tk.Button(
-                self.frame_resultados,
-                text=f'[ID {row["id_csv"]}]  {resumen}',
-                bg="#16213e", fg="white", font=self.f_result,
-                relief="flat", wraplength=int(480*self.sc),
-                justify="left", cursor="hand2",
-                padx=int(8*self.sc), pady=int(6*self.sc),
-                command=lambda i=idx: self._seleccionar(i)
-            )
-            btn.pack(fill="x", pady=int(2*self.sc))
-            btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#2a2a5e"))
-            btn.bind("<Leave>", lambda e, b=btn: b.config(bg="#16213e"))
+            if len(coincidencias) == 1:
+                self._seleccionar(int(coincidencias.iloc[0]["id_csv"]) - 1)
 
-        if len(coincidencias) == 1:
-            self._seleccionar(int(coincidencias.iloc[0]["id_csv"]) - 1)
-
-    def _seleccionar(self, idx):
-        try:
-            numero_base = int(self.entry_base.get().strip())
-        except ValueError:
-            numero_base = 1
-        self.root.destroy()
-        self.callback(self.df, idx, numero_base)
+        def _seleccionar(self, idx):
+            try:
+                numero_base = int(self.entry_base.get().strip())
+            except ValueError:
+                numero_base = 1
+            self.root.destroy()
+            self.callback(self.df, idx, numero_base)
 
 
 class WidgetFormato:
