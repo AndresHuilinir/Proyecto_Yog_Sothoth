@@ -37,6 +37,10 @@ def _cargar_herejias():
 
 _HEREJIAS = _cargar_herejias()
 
+def recargar_herejias():
+    global _HEREJIAS
+    _HEREJIAS = _cargar_herejias()
+
 def _es_video(ruta):
     return os.path.splitext(ruta)[1].lower() in [".mp4", ".mov", ".webm", ".avi"]
 

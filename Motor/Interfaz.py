@@ -2,10 +2,11 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import os
 import subprocess
-from Conocimiento import generar_imagen
+import threading
+from Conocimiento import generar_imagen, recargar_herejias
 from Portales import resolver_plantilla
 from Rezos import convertir_drive, descargar
-from Orden_universal import ruta
+from Orden_universal import ruta, CARPETA_CONFESIONES
 
 UMBRAL_ARRASTRE = 80
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -14,6 +15,14 @@ def _escala(root):
     sw = root.winfo_screenwidth()
     sh = root.winfo_screenheight()
     return min((sw * 0.88) / 720, (sh * 0.88) / 950)
+
+def _tipo_media(ruta_archivo):
+    ext = os.path.splitext(ruta_archivo)[1].lower()
+    if ext in [".mp4", ".mov", ".webm", ".avi"]:
+        return "VIDEO"
+    if ext == ".gif":
+        return "GIF"
+    return None
 
 
 class PantallaInicio:
@@ -96,81 +105,84 @@ class PantallaInicio:
 
         self.root.mainloop()
 
-def _actualizar(self):
-    self.lbl_update.config(text="Verificando...", fg="#ffcc00")
-    self.root.update()
-    try:
-        fetch = subprocess.run(
-            ["git", "fetch", "origin", "main"],
-            cwd=ROOT_DIR, capture_output=True, text=True, timeout=30
-        )
-        if fetch.returncode != 0:
-            self.lbl_update.config(text="⚠️ Error de conexión.", fg="#ff4466")
-            return
+    # ── Todos los métodos van DENTRO de la clase, con 4 espacios de indentación ──
 
-        diff = subprocess.run(
-            ["git", "log", "HEAD..origin/main", "--oneline"],
-            cwd=ROOT_DIR, capture_output=True, text=True
-        )
-        cambios = diff.stdout.strip()
-
-        if not cambios:
-            self.lbl_update.config(text="✅ Ya tienes la versión más reciente.", fg="#00ff88")
-            return
-
-        ventana = tk.Toplevel(self.root)
-        ventana.title("Cambios disponibles")
-        ventana.configure(bg="#1a1a2e")
-        ventana.geometry("500x300")
-
-        tk.Label(
-            ventana,
-            text="Se encontraron estos cambios:",
-            bg="#1a1a2e", fg="white",
-            font=("Helvetica", 12, "bold")
-        ).pack(pady=(20, 10))
-
-        texto = tk.Text(ventana, bg="#16213e", fg="white",
-                        font=("Helvetica", 10), wrap="word",
-                        padx=10, pady=10)
-        texto.pack(fill="both", expand=True, padx=20)
-        texto.insert("1.0", cambios)
-        texto.config(state="disabled")
-
-        frame_btns = tk.Frame(ventana, bg="#1a1a2e")
-        frame_btns.pack(pady=15)
-
-        def confirmar():
-            ventana.destroy()
-            subprocess.run(["git", "pull", "origin", "main"],
-                           cwd=ROOT_DIR, capture_output=True, text=True)
-            self.lbl_update.config(
-                text="✅ Actualizado. Reinicia para aplicar.",
-                fg="#00ff88"
+    def _actualizar(self):
+        self.lbl_update.config(text="Verificando...", fg="#ffcc00")
+        self.root.update()
+        try:
+            fetch = subprocess.run(
+                ["git", "fetch", "origin", "main"],
+                cwd=ROOT_DIR, capture_output=True, text=True, timeout=30
             )
+            if fetch.returncode != 0:
+                self.lbl_update.config(text="⚠️ Error de conexión.", fg="#ff4466")
+                return
 
-        tk.Button(
-            frame_btns, text="✅ Aplicar actualización",
-            bg="#4d45e8", fg="white",
-            font=("Helvetica", 11, "bold"),
-            relief="flat", padx=15, pady=6,
-            cursor="hand2", command=confirmar
-        ).pack(side="left", padx=10)
+            diff = subprocess.run(
+                ["git", "log", "HEAD..origin/main", "--oneline"],
+                cwd=ROOT_DIR, capture_output=True, text=True
+            )
+            cambios = diff.stdout.strip()
 
-        tk.Button(
-            frame_btns, text="❌ Cancelar",
-            bg="#16213e", fg="white",
-            font=("Helvetica", 11),
-            relief="flat", padx=15, pady=6,
-            cursor="hand2", command=ventana.destroy
-        ).pack(side="left", padx=10)
+            if not cambios:
+                self.lbl_update.config(text="✅ Ya tienes la versión más reciente.", fg="#00ff88")
+                return
 
-    except FileNotFoundError:
-        self.lbl_update.config(text="⚠️ Git no está instalado.", fg="#ff4466")
-    except subprocess.TimeoutExpired:
-        self.lbl_update.config(text="⚠️ Tiempo agotado. Revisa tu conexión.", fg="#ff4466")
-    except Exception as e:
-        self.lbl_update.config(text=f"⚠️ Error: {str(e)[:60]}", fg="#ff4466")
+            ventana = tk.Toplevel(self.root)
+            ventana.title("Cambios disponibles")
+            ventana.configure(bg="#1a1a2e")
+            ventana.geometry("500x300")
+
+            tk.Label(
+                ventana,
+                text="Se encontraron estos cambios:",
+                bg="#1a1a2e", fg="white",
+                font=("Helvetica", 12, "bold")
+            ).pack(pady=(20, 10))
+
+            texto = tk.Text(ventana, bg="#16213e", fg="white",
+                            font=("Helvetica", 10), wrap="word",
+                            padx=10, pady=10)
+            texto.pack(fill="both", expand=True, padx=20)
+            texto.insert("1.0", cambios)
+            texto.config(state="disabled")
+
+            frame_btns = tk.Frame(ventana, bg="#1a1a2e")
+            frame_btns.pack(pady=15)
+
+            def confirmar():
+                ventana.destroy()
+                subprocess.run(["git", "pull", "origin", "main"],
+                               cwd=ROOT_DIR, capture_output=True, text=True)
+                self.lbl_update.config(
+                    text="✅ Actualizado. Reinicia para aplicar.",
+                    fg="#00ff88"
+                )
+
+            tk.Button(
+                frame_btns, text="✅ Aplicar actualización",
+                bg="#4d45e8", fg="white",
+                font=("Helvetica", 11, "bold"),
+                relief="flat", padx=15, pady=6,
+                cursor="hand2", command=confirmar
+            ).pack(side="left", padx=10)
+
+            tk.Button(
+                frame_btns, text="❌ Cancelar",
+                bg="#16213e", fg="white",
+                font=("Helvetica", 11),
+                relief="flat", padx=15, pady=6,
+                cursor="hand2", command=ventana.destroy
+            ).pack(side="left", padx=10)
+
+        except FileNotFoundError:
+            self.lbl_update.config(text="⚠️ Git no está instalado.", fg="#ff4466")
+        except subprocess.TimeoutExpired:
+            self.lbl_update.config(text="⚠️ Tiempo agotado. Revisa tu conexión.", fg="#ff4466")
+        except Exception as e:
+            self.lbl_update.config(text=f"⚠️ Error: {str(e)[:60]}", fg="#ff4466")
+
     def _buscar(self):
         for w in self.frame_resultados.winfo_children():
             w.destroy()
@@ -225,6 +237,7 @@ def _actualizar(self):
         self.root.destroy()
         self.callback(self.df, idx, numero_base)
 
+
 class WidgetFormato:
     def __init__(self, parent, formato, sc):
         self.frame = tk.Frame(parent, bg="#2a1a00",
@@ -248,17 +261,19 @@ class WidgetFormato:
 
 class InterfazTinder:
     def __init__(self, df, idx_inicio, numero_base):
-        self.df                   = df
-        self.numero_base          = numero_base
-        self.idx_actual           = idx_inicio
-        self.variantes            = []
-        self.arrastrando          = False
-        self.x_inicio             = 0
-        self.offset_x             = 0
-        self.aceptadas            = 0
-        self.ignoradas            = 0
-        self.numero_visual_actual = numero_base
-        self.tk_imgs              = []
+        self.df                    = df
+        self.numero_base           = numero_base
+        self.idx_actual            = idx_inicio
+        self.variantes             = []
+        self.arrastrando           = False
+        self.x_inicio              = 0
+        self.offset_x              = 0
+        self.aceptadas             = 0
+        self.ignoradas             = 0
+        self.numero_visual_actual  = numero_base
+        self.tk_imgs               = []
+        self._fila_actual          = None
+        self._formato_aviso_actual = None
 
         self.root = tk.Tk()
         self.root.title("Confesiones")
@@ -276,6 +291,7 @@ class InterfazTinder:
         f_variante = ("Helvetica", max(8,  int(10*sc)))
         f_instruc  = ("Helvetica", max(8,  int(11*sc)))
         f_dir      = ("Helvetica", max(14, int(26*sc)), "bold")
+        f_groseria = ("Helvetica", max(8,  int(10*sc)))
 
         self.lbl_contador = tk.Label(self.root, text="", bg="#1a1a2e", fg="white", font=f_contador)
         self.lbl_contador.pack(pady=(int(12*sc), int(2*sc)))
@@ -297,6 +313,33 @@ class InterfazTinder:
         self.lbl_direccion = tk.Label(self.root, text="", bg="#1a1a2e", font=f_dir)
         self.lbl_direccion.pack(pady=int(2*sc))
 
+        # ── Panel "Colocar grosería" ──────────────────────────────────────────
+        frame_groseria = tk.Frame(self.root, bg="#1a1a2e")
+        frame_groseria.pack(pady=(int(6*sc), int(4*sc)))
+
+        tk.Label(frame_groseria, text="Colocar grosería:",
+                 bg="#1a1a2e", fg="#aaaaaa", font=f_groseria
+                 ).pack(side="left", padx=(0, int(6*sc)))
+
+        self.entry_groseria = tk.Entry(frame_groseria,
+                                       font=("Helvetica", max(9, int(11*sc))),
+                                       width=18)
+        self.entry_groseria.pack(side="left", padx=(0, int(6*sc)))
+        self.entry_groseria.bind("<Return>", lambda e: self._agregar_hereje())
+
+        tk.Button(
+            frame_groseria, text="Agregar y regenerar",
+            bg="#4d45e8", fg="white", font=f_groseria,
+            relief="flat", cursor="hand2",
+            padx=int(8*sc), pady=int(3*sc),
+            command=self._agregar_hereje
+        ).pack(side="left")
+
+        self.lbl_groseria_aviso = tk.Label(self.root, text="", bg="#1a1a2e",
+                                           fg="#00ff88", font=f_groseria)
+        self.lbl_groseria_aviso.pack()
+        # ─────────────────────────────────────────────────────────────────────
+
         self.canvas.bind("<ButtonPress-1>",  self._inicio_arrastre)
         self.canvas.bind("<B1-Motion>",       self._durante_arrastre)
         self.canvas.bind("<ButtonRelease-1>", self._fin_arrastre)
@@ -304,11 +347,44 @@ class InterfazTinder:
         self._cargar_confesion()
         self.root.mainloop()
 
+    def _agregar_hereje(self):
+        palabra = self.entry_groseria.get().strip().lower()
+        if not palabra:
+            return
+        herejia_path = ruta("Herejia.txt")
+        with open(herejia_path, "a", encoding="utf-8") as f:
+            f.write(f"\n{palabra}")
+        recargar_herejias()
+        self.entry_groseria.delete(0, tk.END)
+        self.lbl_groseria_aviso.config(text=f'"{palabra}" agregada — regenerando...')
+        self.root.after(2500, lambda: self.lbl_groseria_aviso.config(text=""))
+        for v in self.variantes:
+            if os.path.exists(v):
+                os.remove(v)
+        self.variantes = []
+        self._regenerar_actual()
+
+    def _regenerar_actual(self):
+        if self._fila_actual is None:
+            return
+        self.canvas.delete("all")
+        self.canvas.create_text(
+            self.CANVAS_W // 2, self.CANVAS_H // 2,
+            text="⏳ Regenerando...", fill="white",
+            font=("Helvetica", max(12, int(18 * self.sc)), "bold"),
+            tags="cargando"
+        )
+        t = threading.Thread(
+            target=self._procesar_en_hilo,
+            args=(self._fila_actual, self.numero_visual_actual),
+            daemon=True
+        )
+        t.start()
+
     def _cargar_confesion(self):
         self.variantes = []
         self.lbl_direccion.config(text="")
 
-        # Limpiar avisos de formato del turno anterior
         for w in self.frame_formato.winfo_children():
             w.destroy()
 
@@ -316,10 +392,10 @@ class InterfazTinder:
             self._finalizar()
             return
 
-        row           = self.df.iloc[self.idx_actual]
-        numero_visual = self.numero_visual_actual
+        row               = self.df.iloc[self.idx_actual]
+        self._fila_actual = row
+        numero_visual     = self.numero_visual_actual
 
-        # Mostrar indicador de carga mientras se procesa
         self.canvas.delete("all")
         self.canvas.create_text(
             self.CANVAS_W // 2, self.CANVAS_H // 2,
@@ -341,10 +417,9 @@ class InterfazTinder:
         t.start()
 
     def _procesar_en_hilo(self, row, numero_visual):
-        """Corre fuera del hilo principal: genera la imagen/video."""
         plantilla, sede_custom = resolver_plantilla(str(row["sede"]))
-        confesion    = str(row["confesion"])
-        link_drive   = str(row["imagen"]).strip()
+        confesion  = str(row["confesion"])
+        link_drive = str(row["imagen"]).strip()
 
         ruta_adjunto   = None
         requiere_canva = False
@@ -381,14 +456,9 @@ class InterfazTinder:
             )
         except Exception as e:
             print(f"[ERROR] Generando confesión {numero_visual}: {e}")
-            # No auto-saltar: mostrar al usuario para que evalúe
             self.root.after(0, self._mostrar_resultado, [], formato_aviso, confesion, True)
             return
 
-        # ── CORRECCIÓN PRINCIPAL ──────────────────────────────────────────────
-        # Usar CARPETA_CONFESIONES (ruta absoluta desde Orden_universal)
-        # en lugar de la ruta relativa "Confesiones/..." que no coincide.
-        # ─────────────────────────────────────────────────────────────────────
         base = os.path.join(CARPETA_CONFESIONES, f"Confesion {numero_visual}")
         candidatos = [
             f"{base}.png",
@@ -402,12 +472,11 @@ class InterfazTinder:
             f"{base} V2 (2).mp4",
         ]
         variantes = [c for c in candidatos if os.path.exists(c)]
-
         self.root.after(0, self._mostrar_resultado, variantes, formato_aviso, confesion, False)
 
     def _mostrar_resultado(self, variantes, formato_aviso, confesion_texto, hubo_error):
-        """Corre en el hilo principal de tkinter para actualizar la UI."""
-        self.variantes = variantes
+        self.variantes             = variantes
+        self._formato_aviso_actual = formato_aviso
 
         self.lbl_contador.config(
             text=f"Confesión {self.idx_actual + 1} de {len(self.df)}"
@@ -418,14 +487,12 @@ class InterfazTinder:
             WidgetFormato(self.frame_formato, formato_aviso, self.sc)
 
         if not self.variantes:
-            # Sin imagen pero el usuario igual evalúa: mostrar texto de la confesión
             self._mostrar_sin_imagen(confesion_texto, hubo_error)
             return
 
         self._mostrar_variantes()
 
     def _mostrar_sin_imagen(self, texto, hubo_error):
-        """Muestra la confesión en texto cuando no hay archivos de imagen."""
         cw = self.CANVAS_W
         ch = self.CANVAS_H
         sc = self.sc
@@ -434,27 +501,20 @@ class InterfazTinder:
 
         self.canvas.create_rectangle(0, 0, cw, ch, fill="#1a1a2e", outline="")
 
-        if hubo_error:
-            aviso       = "⚠️ Error al generar imagen — evalúa el texto"
-            color_aviso = "#ff4466"
-        else:
-            aviso       = "⚠️ Sin imagen generada — evalúa el texto"
-            color_aviso = "#ffcc00"
+        aviso       = "⚠️ Error al generar imagen — evalúa el texto" if hubo_error else "⚠️ Sin imagen generada — evalúa el texto"
+        color_aviso = "#ff4466" if hubo_error else "#ffcc00"
 
         self.canvas.create_text(
             cw // 2, int(ch * 0.18),
-            text=aviso,
-            fill=color_aviso,
+            text=aviso, fill=color_aviso,
             font=("Helvetica", max(9, int(12*sc)), "bold"),
             tags="imagen"
         )
         self.canvas.create_text(
             cw // 2, int(ch * 0.52),
-            text=texto,
-            fill="white",
+            text=texto, fill="white",
             font=("Helvetica", max(9, int(12*sc))),
-            width=int(cw * 0.85),
-            justify="center",
+            width=int(cw * 0.85), justify="center",
             tags="imagen"
         )
         self.lbl_variante.config(text="Sin archivos — evalúa igualmente con arrastre")
