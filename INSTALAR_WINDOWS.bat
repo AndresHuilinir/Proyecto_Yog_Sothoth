@@ -5,27 +5,54 @@ echo   Instalador - Proyecto Yog Sothoth
 echo ============================================
 echo.
 
+:: ---- PYTHON ----
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Python no está instalado en tu PC.
+    echo [!] Python no encontrado. Instalando automaticamente...
+    winget install --id Python.Python.3 --source winget --accept-package-agreements --accept-source-agreements --silent
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] No se pudo instalar Python automaticamente.
+        echo Por favor instalalo manualmente desde:
+        echo https://www.python.org/downloads/
+        echo IMPORTANTE: marca "Add Python to PATH" durante la instalacion.
+        echo.
+        pause
+        exit
+    )
+    echo [OK] Python instalado.
     echo.
-    echo  Para instalarlo:
-    echo  1. Abre tu navegador
-    echo  2. Ve a https://www.python.org/downloads/
-    echo  3. Descarga la version mas reciente
-    echo  4. Al instalar, MARCA la casilla "Add Python to PATH"
-    echo  5. Una vez instalado, vuelve a ejecutar este archivo
-    echo.
-    pause
-    exit
+    echo Reiniciando variables de entorno...
+    call refreshenv >nul 2>&1
+) else (
+    echo [OK] Python ya estaba instalado.
 )
 
-echo [OK] Python encontrado.
-echo.
-echo Instalando dependencias necesarias...
-echo Esto puede tardar unos minutos la primera vez.
-echo.
+:: ---- GIT ----
+git --version >nul 2>&1
+if errorlevel 1 (
+    echo [!] Git no encontrado. Instalando automaticamente...
+    winget install --id Git.Git --source winget --accept-package-agreements --accept-source-agreements --silent
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] No se pudo instalar Git automaticamente.
+        echo Por favor instalalo manualmente desde:
+        echo https://git-scm.com/downloads
+        echo.
+        pause
+        exit
+    )
+    echo [OK] Git instalado.
+    echo.
+    echo Actualizando PATH con Git...
+    set "PATH=%PATH%;C:\Program Files\Git\cmd"
+) else (
+    echo [OK] Git ya estaba instalado.
+)
 
+:: ---- DEPENDENCIAS ----
+echo.
+echo Instalando dependencias de Python...
 cd /d "%~dp0Motor"
 
 python -m pip install --upgrade pip --quiet
@@ -42,16 +69,17 @@ if errorlevel 1 (
     exit
 )
 
+:: ---- ACCESO DIRECTO ----
 echo.
-echo [OK] Dependencias instaladas correctamente.
+echo [OK] Dependencias instaladas.
 echo.
 echo Creando acceso directo...
 python crear_acceso.py
 
 echo.
 echo ============================================
-echo   Instalacion completada con exito
-echo   Ahora puedes usar: Lanzar.bat
+echo   Instalacion completada con exito.
+echo   Usa Lanzar.bat para iniciar el programa.
 echo ============================================
 echo.
 pause

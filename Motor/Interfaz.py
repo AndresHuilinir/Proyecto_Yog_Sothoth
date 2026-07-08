@@ -1,26 +1,20 @@
 import tkinter as tk
 from PIL import Image, ImageTk
 import os
+import subprocess
 from Conocimiento import generar_imagen
 from Portales import resolver_plantilla
 from Rezos import convertir_drive, descargar
-from Orden_universal import ruta, CARPETA_CONFESIONES
-import threading
+from Orden_universal import ruta
 
 UMBRAL_ARRASTRE = 80
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def _escala(root):
     sw = root.winfo_screenwidth()
     sh = root.winfo_screenheight()
     return min((sw * 0.88) / 720, (sh * 0.88) / 950)
 
-def _tipo_media(ruta_archivo):
-    ext = os.path.splitext(ruta_archivo)[1].lower()
-    if ext in [".mp4", ".mov", ".webm", ".avi"]:
-        return "VIDEO"
-    if ext == ".gif":
-        return "GIF"
-    return None
 
 class PantallaInicio:
     def __init__(self, df, callback):
@@ -34,7 +28,7 @@ class PantallaInicio:
 
         sc       = _escala(self.root)
         self.sc  = sc
-        self.root.geometry(f"{int(540*sc)}x{int(520*sc)}")
+        self.root.geometry(f"{int(540*sc)}x{int(580*sc)}")
 
         f_titulo = ("Helvetica", max(10, int(18*sc)), "bold")
         f_normal = ("Helvetica", max(9,  int(12*sc)))
@@ -43,13 +37,31 @@ class PantallaInicio:
         f_result = ("Helvetica", max(8,  int(11*sc)))
         self.f_result = f_result
 
-        tk.Label(self.root, text="⚙️ Configuración de sesión",
-                 bg="#1a1a2e", fg="white", font=f_titulo
-                 ).pack(pady=(int(25*sc), int(10*sc)))
+        # --- Botón de actualización ---
+        frame_update = tk.Frame(self.root, bg="#1a1a2e")
+        frame_update.pack(pady=(int(15*sc), 0), padx=int(20*sc), fill="x")
 
-        tk.Label(self.root, text=f"Total de confesiones disponibles: {len(df)}",
-                 bg="#1a1a2e", fg="#aaaaaa", font=f_sub
-                 ).pack(pady=(0, int(12*sc)))
+        tk.Button(
+            frame_update, text="🔄 Buscar actualizaciones",
+            bg="#16213e", fg="#aaaaaa", font=f_sub,
+            relief="flat", padx=int(10*sc), pady=int(5*sc),
+            cursor="hand2", command=self._actualizar
+        ).pack(side="left")
+
+        self.lbl_update = tk.Label(
+            frame_update, text="", bg="#1a1a2e", fg="#aaaaaa", font=f_sub
+        )
+        self.lbl_update.pack(side="left", padx=(int(8*sc), 0))
+
+        tk.Label(
+            self.root, text="⚙️ Configuración de sesión",
+            bg="#1a1a2e", fg="white", font=f_titulo
+        ).pack(pady=(int(15*sc), int(10*sc)))
+
+        tk.Label(
+            self.root, text=f"Total de confesiones disponibles: {len(df)}",
+            bg="#1a1a2e", fg="#aaaaaa", font=f_sub
+        ).pack(pady=(0, int(12*sc)))
 
         tk.Label(self.root, text="Busca la confesión por un fragmento de texto:",
                  bg="#1a1a2e", fg="white", font=f_normal).pack()
@@ -60,9 +72,11 @@ class PantallaInicio:
         self.entry_busq = tk.Entry(frame_busq, font=("Helvetica", max(9, int(12*sc))), width=28)
         self.entry_busq.pack(side="left", padx=(0, int(6*sc)))
 
-        tk.Button(frame_busq, text="Buscar", bg="#4d45e8", fg="white", font=f_boton,
-                  relief="flat", padx=int(10*sc), pady=int(4*sc),
-                  cursor="hand2", command=self._buscar).pack(side="left")
+        tk.Button(
+            frame_busq, text="Buscar", bg="#4d45e8", fg="white", font=f_boton,
+            relief="flat", padx=int(10*sc), pady=int(4*sc),
+            cursor="hand2", command=self._buscar
+        ).pack(side="left")
 
         self.frame_resultados = tk.Frame(self.root, bg="#1a1a2e")
         self.frame_resultados.pack(pady=(int(5*sc), int(5*sc)), fill="x", padx=int(20*sc))
@@ -73,14 +87,90 @@ class PantallaInicio:
         tk.Label(self.root, text="Número visual de inicio:",
                  bg="#1a1a2e", fg="white", font=f_normal).pack(pady=(int(10*sc), 0))
 
-        self.entry_base = tk.Entry(self.root,
-                                   font=("Helvetica", max(10, int(14*sc))),
-                                   justify="center", width=10)
+        self.entry_base = tk.Entry(
+            self.root, font=("Helvetica", max(10, int(14*sc))),
+            justify="center", width=10
+        )
         self.entry_base.pack(pady=(int(4*sc), int(8*sc)))
         self.entry_base.insert(0, "1")
 
         self.root.mainloop()
 
+def _actualizar(self):
+    self.lbl_update.config(text="Verificando...", fg="#ffcc00")
+    self.root.update()
+    try:
+        fetch = subprocess.run(
+            ["git", "fetch", "origin", "main"],
+            cwd=ROOT_DIR, capture_output=True, text=True, timeout=30
+        )
+        if fetch.returncode != 0:
+            self.lbl_update.config(text="⚠️ Error de conexión.", fg="#ff4466")
+            return
+
+        diff = subprocess.run(
+            ["git", "log", "HEAD..origin/main", "--oneline"],
+            cwd=ROOT_DIR, capture_output=True, text=True
+        )
+        cambios = diff.stdout.strip()
+
+        if not cambios:
+            self.lbl_update.config(text="✅ Ya tienes la versión más reciente.", fg="#00ff88")
+            return
+
+        ventana = tk.Toplevel(self.root)
+        ventana.title("Cambios disponibles")
+        ventana.configure(bg="#1a1a2e")
+        ventana.geometry("500x300")
+
+        tk.Label(
+            ventana,
+            text="Se encontraron estos cambios:",
+            bg="#1a1a2e", fg="white",
+            font=("Helvetica", 12, "bold")
+        ).pack(pady=(20, 10))
+
+        texto = tk.Text(ventana, bg="#16213e", fg="white",
+                        font=("Helvetica", 10), wrap="word",
+                        padx=10, pady=10)
+        texto.pack(fill="both", expand=True, padx=20)
+        texto.insert("1.0", cambios)
+        texto.config(state="disabled")
+
+        frame_btns = tk.Frame(ventana, bg="#1a1a2e")
+        frame_btns.pack(pady=15)
+
+        def confirmar():
+            ventana.destroy()
+            subprocess.run(["git", "pull", "origin", "main"],
+                           cwd=ROOT_DIR, capture_output=True, text=True)
+            self.lbl_update.config(
+                text="✅ Actualizado. Reinicia para aplicar.",
+                fg="#00ff88"
+            )
+
+        tk.Button(
+            frame_btns, text="✅ Aplicar actualización",
+            bg="#4d45e8", fg="white",
+            font=("Helvetica", 11, "bold"),
+            relief="flat", padx=15, pady=6,
+            cursor="hand2", command=confirmar
+        ).pack(side="left", padx=10)
+
+        tk.Button(
+            frame_btns, text="❌ Cancelar",
+            bg="#16213e", fg="white",
+            font=("Helvetica", 11),
+            relief="flat", padx=15, pady=6,
+            cursor="hand2", command=ventana.destroy
+        ).pack(side="left", padx=10)
+
+    except FileNotFoundError:
+        self.lbl_update.config(text="⚠️ Git no está instalado.", fg="#ff4466")
+    except subprocess.TimeoutExpired:
+        self.lbl_update.config(text="⚠️ Tiempo agotado. Revisa tu conexión.", fg="#ff4466")
+    except Exception as e:
+        self.lbl_update.config(text=f"⚠️ Error: {str(e)[:60]}", fg="#ff4466")
     def _buscar(self):
         for w in self.frame_resultados.winfo_children():
             w.destroy()
@@ -100,10 +190,11 @@ class PantallaInicio:
         ultimas = coincidencias.tail(3)
 
         if len(coincidencias) > 1:
-            tk.Label(self.frame_resultados,
-                     text=f"Se encontraron {len(coincidencias)} coincidencias. Últimas 3:",
-                     bg="#1a1a2e", fg="#aaaaaa", font=self.f_result
-                     ).pack(anchor="w", pady=(0, int(4*self.sc)))
+            tk.Label(
+                self.frame_resultados,
+                text=f"Se encontraron {len(coincidencias)} coincidencias. Últimas 3:",
+                bg="#1a1a2e", fg="#aaaaaa", font=self.f_result
+            ).pack(anchor="w", pady=(0, int(4*self.sc)))
 
         for _, row in ultimas.iterrows():
             texto   = str(row["confesion"]).strip()
@@ -133,7 +224,6 @@ class PantallaInicio:
             numero_base = 1
         self.root.destroy()
         self.callback(self.df, idx, numero_base)
-
 
 class WidgetFormato:
     def __init__(self, parent, formato, sc):
