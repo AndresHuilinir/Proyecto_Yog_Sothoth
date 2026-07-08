@@ -82,6 +82,22 @@ if errorlevel 1 (
     echo [OK] Git ya estaba instalado.
 )
 
+:: ---- CLONAR SI VIENE DE ZIP ----
+if not exist "%~dp0.git" (
+    echo [!] No se encontro repositorio git.
+    echo     Clonando desde GitHub...
+    git clone https://github.com/TU_USUARIO/TU_REPO.git "%~dp0temp_clone"
+    if errorlevel 1 (
+        echo [ERROR] No se pudo clonar el repositorio.
+        echo Revisa tu conexion a internet.
+        pause
+        exit
+    )
+    xcopy /E /H /Y "%~dp0temp_clone\*" "%~dp0"
+    rmdir /S /Q "%~dp0temp_clone"
+    echo [OK] Repositorio configurado correctamente.
+)
+
 :: ---- DEPENDENCIAS ----
 echo.
 echo Instalando dependencias de Python...
