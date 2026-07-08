@@ -16,6 +16,10 @@ subprocess.run(["git", "config", "core.askPass", ""],
                cwd=ROOT_DIR, capture_output=True)
 subprocess.run(["git", "config", "--global", "credential.helper", ""],
                cwd=ROOT_DIR, capture_output=True)
+subprocess.run(["git", "config", "--global", "GIT_TERMINAL_PROMPT", "0"],
+               cwd=ROOT_DIR, capture_output=True)
+subprocess.run(["git", "config", "--global", "core.askPass", "echo"],
+               cwd=ROOT_DIR, capture_output=True)
 
 if sys.platform == "win32":
     ruta_acceso = os.path.join(ROOT_DIR, "Lanzar.bat")
