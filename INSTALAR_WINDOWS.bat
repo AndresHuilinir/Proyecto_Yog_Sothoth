@@ -92,7 +92,7 @@ echo   Instalacion completada con exito.
 echo.
 echo   IMPORTANTE: Si es la primera vez que
 echo   instalas Python o Git, REINICIA el PC
-echo   antes de usar Lanzar.bat
+echo   antes de usar Yoguito.bat
 echo ============================================
 echo.
 pause
