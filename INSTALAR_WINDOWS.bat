@@ -92,7 +92,7 @@ if not exist "%~dp0.git" (
         rmdir /S /Q "%~dp0temp_clone"
     )
 
-    git clone https://github.com/TU_USUARIO/TU_REPO.git "%~dp0temp_clone"
+    git clone https://github.com/PulpitoDev/Proyecto_Yog_Sothoth.git "%~dp0temp_clone"
     if errorlevel 1 (
         echo [ERROR] No se pudo clonar el repositorio.
         echo Revisa tu conexion a internet.
