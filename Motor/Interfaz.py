@@ -46,7 +46,6 @@ class PantallaInicio:
         f_result = ("Helvetica", max(8,  int(11*sc)))
         self.f_result = f_result
 
-        # --- Botón de actualización ---
         frame_update = tk.Frame(self.root, bg="#1a1a2e")
         frame_update.pack(pady=(int(15*sc), 0), padx=int(20*sc), fill="x")
 
@@ -105,19 +104,17 @@ class PantallaInicio:
 
         self.root.mainloop()
 
-    # ── Todos los métodos van DENTRO de la clase, con 4 espacios de indentación ──
-
     def _actualizar(self):
         self.lbl_update.config(text="Verificando...", fg="#ffcc00")
         self.root.update()
 
-        REPO_URL = "https://github.com/PulpitoDev/Proyecto_Yog_Sothoth.git"
+        REPO_URL = "https://github.com/TU_USUARIO/TU_REPO.git"
 
         env_sin_auth = os.environ.copy()
-        env_sin_auth["GIT_TERMINAL_PROMPT"]    = "0"
-        env_sin_auth["GIT_ASKPASS"]            = "echo"
-        env_sin_auth["GCM_INTERACTIVE"]        = "never"
-        env_sin_auth["GIT_SSH_COMMAND"]        = "ssh -o BatchMode=yes"
+        env_sin_auth["GIT_TERMINAL_PROMPT"] = "0"
+        env_sin_auth["GIT_ASKPASS"]         = "echo"
+        env_sin_auth["GCM_INTERACTIVE"]     = "never"
+        env_sin_auth["GIT_SSH_COMMAND"]     = "ssh -o BatchMode=yes"
 
         try:
             fetch = subprocess.run(
@@ -153,8 +150,8 @@ class PantallaInicio:
             ).pack(pady=(20, 10))
 
             texto_widget = tk.Text(ventana, bg="#16213e", fg="white",
-                                font=("Helvetica", 10), wrap="word",
-                                padx=10, pady=10)
+                                   font=("Helvetica", 10), wrap="word",
+                                   padx=10, pady=10)
             texto_widget.pack(fill="both", expand=True, padx=20)
             texto_widget.insert("1.0", cambios)
             texto_widget.config(state="disabled")
@@ -197,6 +194,60 @@ class PantallaInicio:
         except Exception as e:
             self.lbl_update.config(text=f"⚠️ Error: {str(e)[:60]}", fg="#ff4466")
 
+    def _buscar(self):
+        for w in self.frame_resultados.winfo_children():
+            w.destroy()
+        self.lbl_error.config(text="")
+
+        fragmento = self.entry_busq.get().strip().lower()
+        if not fragmento:
+            self.lbl_error.config(text="Escribe algo para buscar.")
+            return
+
+        coincidencias = self.df[self.df["confesion"].str.lower().str.contains(fragmento, na=False)]
+
+        if coincidencias.empty:
+            self.lbl_error.config(text="No se encontraron coincidencias. Intenta con otro fragmento.")
+            return
+
+        ultimas = coincidencias.tail(3)
+
+        if len(coincidencias) > 1:
+            tk.Label(
+                self.frame_resultados,
+                text=f"Se encontraron {len(coincidencias)} coincidencias. Últimas 3:",
+                bg="#1a1a2e", fg="#aaaaaa", font=self.f_result
+            ).pack(anchor="w", pady=(0, int(4*self.sc)))
+
+        for _, row in ultimas.iterrows():
+            texto   = str(row["confesion"]).strip()
+            resumen = (texto[:90] + "...") if len(texto) > 90 else texto
+            idx     = int(row["id_csv"]) - 1
+
+            btn = tk.Button(
+                self.frame_resultados,
+                text=f'[ID {row["id_csv"]}]  {resumen}',
+                bg="#16213e", fg="white", font=self.f_result,
+                relief="flat", wraplength=int(480*self.sc),
+                justify="left", cursor="hand2",
+                padx=int(8*self.sc), pady=int(6*self.sc),
+                command=lambda i=idx: self._seleccionar(i)
+            )
+            btn.pack(fill="x", pady=int(2*self.sc))
+            btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#2a2a5e"))
+            btn.bind("<Leave>", lambda e, b=btn: b.config(bg="#16213e"))
+
+        if len(coincidencias) == 1:
+            self._seleccionar(int(coincidencias.iloc[0]["id_csv"]) - 1)
+
+    def _seleccionar(self, idx):
+        try:
+            numero_base = int(self.entry_base.get().strip())
+        except ValueError:
+            numero_base = 1
+        self.root.destroy()
+        self.callback(self.df, idx, numero_base)
+        
 class WidgetFormato:
     def __init__(self, parent, formato, sc):
         self.frame = tk.Frame(parent, bg="#2a1a00",
