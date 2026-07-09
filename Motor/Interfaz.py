@@ -118,7 +118,12 @@ class PantallaInicio:
 
         try:
             fetch = subprocess.run(
-                ["git", "fetch", REPO_URL, "main"],
+                [
+                    "git",
+                    "-c", "credential.helper=",
+                    "-c", "http.extraHeader=",
+                    "fetch", REPO_URL, "main"
+                ],
                 cwd=ROOT_DIR, capture_output=True, text=True,
                 timeout=30, env=env_sin_auth
             )
@@ -162,7 +167,12 @@ class PantallaInicio:
             def confirmar():
                 ventana.destroy()
                 subprocess.run(
-                    ["git", "pull", REPO_URL, "main"],
+                    [
+                        "git",
+                        "-c", "credential.helper=",
+                        "-c", "http.extraHeader=",
+                        "pull", REPO_URL, "main"
+                    ],
                     cwd=ROOT_DIR, capture_output=True, text=True,
                     env=env_sin_auth
                 )
@@ -247,7 +257,7 @@ class PantallaInicio:
             numero_base = 1
         self.root.destroy()
         self.callback(self.df, idx, numero_base)
-        
+
 class WidgetFormato:
     def __init__(self, parent, formato, sc):
         self.frame = tk.Frame(parent, bg="#2a1a00",
