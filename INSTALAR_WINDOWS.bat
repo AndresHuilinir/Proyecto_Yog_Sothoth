@@ -51,58 +51,7 @@ if errorlevel 1 (
     exit
 )
 
-:: ---- GIT ----
-git --version >nul 2>&1
-if errorlevel 1 (
-    echo [!] Git no encontrado. Descargando instalador...
-    PowerShell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://github.com/git-for-windows/git/releases/download/v2.45.2.windows.1/Git-2.45.2-64-bit.exe' -OutFile '%TEMP%\git_installer.exe'"
-    if errorlevel 1 (
-        echo.
-        echo [ERROR] No se pudo descargar Git.
-        echo Revisa tu conexion e intenta de nuevo.
-        echo O instalalo manualmente desde https://git-scm.com/downloads
-        echo.
-        pause
-        exit
-    )
-    echo [OK] Instalando Git...
-    "%TEMP%\git_installer.exe" /VERYSILENT /NORESTART /COMPONENTS="icons,ext\reg\shellhere,assoc,assoc_sh" /o:PathOption=CmdTools
-    if errorlevel 1 (
-        echo.
-        echo [ERROR] Fallo la instalacion de Git.
-        echo Intenta ejecutar este archivo como Administrador.
-        echo.
-        pause
-        exit
-    )
-    del "%TEMP%\git_installer.exe"
-    set "PATH=%PATH%;C:\Program Files\Git\cmd"
-    echo [OK] Git instalado correctamente.
-) else (
-    echo [OK] Git ya estaba instalado.
-)
 
-:: ---- CLONAR SI VIENE DE ZIP ----
-if not exist "%~dp0.git" (
-    echo [!] No se encontro repositorio git.
-    echo     Clonando desde GitHub...
-
-    :: Limpiar intento anterior si existe
-    if exist "%~dp0temp_clone" (
-        rmdir /S /Q "%~dp0temp_clone"
-    )
-
-    git clone https://github.com/PulpitoDev/Proyecto_Yog_Sothoth.git "%~dp0temp_clone"
-    if errorlevel 1 (
-        echo [ERROR] No se pudo clonar el repositorio.
-        echo Revisa tu conexion a internet.
-        pause
-        exit
-    )
-    xcopy /E /H /Y "%~dp0temp_clone\*" "%~dp0"
-    rmdir /S /Q "%~dp0temp_clone"
-    echo [OK] Repositorio configurado correctamente.
-)
 
 :: ---- DEPENDENCIAS ----
 echo.
