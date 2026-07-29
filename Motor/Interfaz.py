@@ -27,8 +27,10 @@ def _tipo_media(ruta_archivo):
 
 class PantallaInicio:
     def __init__(self, df, callback):
-        self.df       = df
-        self.callback = callback
+        self.df               = df
+        self.callback         = callback
+        self.idx_seleccionado = 0
+        self.botones_resultado = []
 
         self.root = tk.Tk()
         self.root.title("Confesiones — Inicio")
@@ -37,7 +39,7 @@ class PantallaInicio:
 
         sc       = _escala(self.root)
         self.sc  = sc
-        self.root.geometry(f"{int(540*sc)}x{int(580*sc)}")
+        self.root.geometry(f"{int(540*sc)}x{int(620*sc)}")
 
         f_titulo = ("Helvetica", max(10, int(18*sc)), "bold")
         f_normal = ("Helvetica", max(9,  int(12*sc)))
@@ -46,38 +48,59 @@ class PantallaInicio:
         f_result = ("Helvetica", max(8,  int(11*sc)))
         self.f_result = f_result
 
-        frame_update = tk.Frame(self.root, bg="#1a1a2e")
-        frame_update.pack(pady=(int(15*sc), 0), padx=int(20*sc), fill="x")
-
-        tk.Button(
-            frame_update, text="🔄 Buscar actualizaciones",
-            bg="#16213e", fg="#aaaaaa", font=f_sub,
-            relief="flat", padx=int(10*sc), pady=int(5*sc),
-            cursor="hand2", command=self._actualizar
-        ).pack(side="left")
-
-        self.lbl_update = tk.Label(
-            frame_update, text="", bg="#1a1a2e", fg="#aaaaaa", font=f_sub
-        )
-        self.lbl_update.pack(side="left", padx=(int(8*sc), 0))
-
         tk.Label(
             self.root, text="⚙️ Configuración de sesión",
             bg="#1a1a2e", fg="white", font=f_titulo
-        ).pack(pady=(int(15*sc), int(10*sc)))
+        ).pack(pady=(int(15*sc), int(8*sc)))
 
         tk.Label(
             self.root, text=f"Total de confesiones disponibles: {len(df)}",
             bg="#1a1a2e", fg="#aaaaaa", font=f_sub
-        ).pack(pady=(0, int(12*sc)))
+        ).pack(pady=(0, int(8*sc)))
 
-        tk.Label(self.root, text="Busca la confesión por un fragmento de texto:",
-                 bg="#1a1a2e", fg="white", font=f_normal).pack()
+        tk.Label(
+            self.root, text="Número visual de inicio:",
+            bg="#1a1a2e", fg="white", font=f_normal
+        ).pack()
+
+        self.entry_base = tk.Entry(
+            self.root, font=("Helvetica", max(10, int(14*sc))),
+            justify="center", width=10
+        )
+        self.entry_base.pack(pady=(int(4*sc), int(8*sc)))
+        self.entry_base.insert(0, "1")
+
+        tk.Button(
+            self.root, text="⚡ Generar todo sin supervisión",
+            bg="#2a1a00", fg="#ffcc00",
+            font=f_sub, relief="flat",
+            padx=int(10*sc), pady=int(6*sc),
+            cursor="hand2",
+            command=self._generar_todo
+        ).pack(pady=(0, int(6*sc)))
+
+        self.lbl_progreso = tk.Label(
+            self.root, text="", bg="#1a1a2e", fg="#aaaaaa", font=f_sub
+        )
+        self.lbl_progreso.pack()
+
+        tk.Label(
+            self.root,
+            text="── o busca una confesión específica ──",
+            bg="#1a1a2e", fg="#555577", font=f_sub
+        ).pack(pady=(int(8*sc), int(3*sc)))
+
+        tk.Label(
+            self.root, text="Busca la confesión por un fragmento de texto:",
+            bg="#1a1a2e", fg="white", font=f_normal
+        ).pack()
 
         frame_busq = tk.Frame(self.root, bg="#1a1a2e")
         frame_busq.pack(pady=(int(5*sc), int(5*sc)))
 
-        self.entry_busq = tk.Entry(frame_busq, font=("Helvetica", max(9, int(12*sc))), width=28)
+        self.entry_busq = tk.Entry(
+            frame_busq, font=("Helvetica", max(9, int(12*sc))), width=28
+        )
         self.entry_busq.pack(side="left", padx=(0, int(6*sc)))
 
         tk.Button(
@@ -89,38 +112,32 @@ class PantallaInicio:
         self.frame_resultados = tk.Frame(self.root, bg="#1a1a2e")
         self.frame_resultados.pack(pady=(int(5*sc), int(5*sc)), fill="x", padx=int(20*sc))
 
-        self.lbl_error = tk.Label(self.root, text="", bg="#1a1a2e", fg="#ff4466", font=f_sub)
+        self.lbl_error = tk.Label(
+            self.root, text="", bg="#1a1a2e", fg="#ff4466", font=f_sub
+        )
         self.lbl_error.pack()
 
-        tk.Label(self.root, text="Número visual de inicio:",
-                 bg="#1a1a2e", fg="white", font=f_normal).pack(pady=(int(10*sc), 0))
-
-        self.entry_base = tk.Entry(
-            self.root, font=("Helvetica", max(10, int(14*sc))),
-            justify="center", width=10
-        )
-        self.entry_base.pack(pady=(int(4*sc), int(8*sc)))
-        self.entry_base.insert(0, "1")
-
         self.root.mainloop()
-
-    def _actualizar(self):
-        self.lbl_update.config(text="Actualizaciones no disponibles en esta versión.", fg="#aaaaaa")
 
     def _buscar(self):
         for w in self.frame_resultados.winfo_children():
             w.destroy()
         self.lbl_error.config(text="")
+        self.botones_resultado = []
 
         fragmento = self.entry_busq.get().strip().lower()
         if not fragmento:
             self.lbl_error.config(text="Escribe algo para buscar.")
             return
 
-        coincidencias = self.df[self.df["confesion"].str.lower().str.contains(fragmento, na=False)]
+        coincidencias = self.df[
+            self.df["confesion"].str.lower().str.contains(fragmento, na=False)
+        ]
 
         if coincidencias.empty:
-            self.lbl_error.config(text="No se encontraron coincidencias. Intenta con otro fragmento.")
+            self.lbl_error.config(
+                text="No se encontraron coincidencias. Intenta con otro fragmento."
+            )
             return
 
         ultimas = coincidencias.tail(3)
@@ -144,14 +161,41 @@ class PantallaInicio:
                 relief="flat", wraplength=int(480*self.sc),
                 justify="left", cursor="hand2",
                 padx=int(8*self.sc), pady=int(6*self.sc),
-                command=lambda i=idx: self._seleccionar(i)
+                command=lambda i=idx: self._marcar_seleccion(i)
             )
             btn.pack(fill="x", pady=int(2*self.sc))
             btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#2a2a5e"))
-            btn.bind("<Leave>", lambda e, b=btn: b.config(bg="#16213e"))
+            btn.bind("<Leave>", lambda e, b=btn: self._restaurar_color(b))
+            self.botones_resultado.append((btn, idx))
+
+        tk.Button(
+            self.frame_resultados,
+            text="▶ Comenzar desde seleccionada →",
+            bg="#4d45e8", fg="white",
+            font=self.f_result, relief="flat",
+            cursor="hand2",
+            padx=int(8*self.sc), pady=int(6*self.sc),
+            command=lambda: self._seleccionar(self.idx_seleccionado)
+        ).pack(fill="x", pady=(int(6*self.sc), 0))
 
         if len(coincidencias) == 1:
-            self._seleccionar(int(coincidencias.iloc[0]["id_csv"]) - 1)
+            self._marcar_seleccion(int(coincidencias.iloc[0]["id_csv"]) - 1)
+
+    def _marcar_seleccion(self, idx):
+        self.idx_seleccionado = idx
+        for btn, btn_idx in self.botones_resultado:
+            if btn_idx == idx:
+                btn.config(bg="#4d45e8")
+            else:
+                btn.config(bg="#16213e")
+
+    def _restaurar_color(self, btn):
+        for b, idx in self.botones_resultado:
+            if b == btn:
+                if idx == self.idx_seleccionado:
+                    b.config(bg="#4d45e8")
+                else:
+                    b.config(bg="#16213e")
 
     def _seleccionar(self, idx):
         try:
@@ -160,6 +204,62 @@ class PantallaInicio:
             numero_base = 1
         self.root.destroy()
         self.callback(self.df, idx, numero_base)
+
+    def _generar_todo(self):
+        try:
+            numero_base = int(self.entry_base.get().strip())
+        except ValueError:
+            numero_base = 1
+
+        idx_inicio  = self.idx_seleccionado
+        df_procesar = self.df.iloc[idx_inicio:].reset_index(drop=True)
+        total       = len(df_procesar)
+
+        self.lbl_progreso.config(text=f"Generando 0 / {total}...", fg="#ffcc00")
+        self.root.update()
+
+        def hilo():
+            for i, (_, row) in enumerate(df_procesar.iterrows()):
+                numero_visual          = numero_base + i
+                plantilla, sede_custom = resolver_plantilla(str(row["sede"]))
+                confesion              = str(row["confesion"])
+                link_drive             = str(row["imagen"]).strip()
+
+                ruta_adjunto   = None
+                requiere_canva = False
+
+                if "drive.google.com" in link_drive:
+                    url_directa = convertir_drive(link_drive)
+                    if url_directa:
+                        temp_path = ruta(f"archivos/temp_{numero_visual}")
+                        resultado = descargar(url_directa, temp_path)
+                        if resultado and resultado.startswith("FORMATO:"):
+                            requiere_canva = True
+                        elif resultado:
+                            ruta_adjunto = resultado
+
+                try:
+                    generar_imagen(
+                        nombre_plantilla = plantilla,
+                        numero           = numero_visual,
+                        confesion        = confesion,
+                        sede_custom      = sede_custom,
+                        ruta_adjunto     = ruta_adjunto,
+                        requiere_canva   = requiere_canva,
+                    )
+                except Exception as e:
+                    print(f"[ERROR] Confesión {numero_visual}: {e}")
+
+                self.root.after(0, lambda n=i+1: self.lbl_progreso.config(
+                    text=f"Generando {n} / {total}...", fg="#ffcc00"
+                ))
+
+            self.root.after(0, lambda: self.lbl_progreso.config(
+                text=f"✅ {total} confesiones generadas en Confesiones/", fg="#00ff88"
+            ))
+
+        threading.Thread(target=hilo, daemon=True).start()
+
 
 class WidgetFormato:
     def __init__(self, parent, formato, sc):
@@ -230,13 +330,12 @@ class InterfazTinder:
         self.frame_formato.pack(fill="x", padx=int(10*sc))
 
         tk.Label(self.root,
-                 text="← Ignorar     Arrastra la imagen     Aceptar →",
+                 text="← Ignorar     Arrastra o usa flechas     Aceptar →",
                  bg="#1a1a2e", fg="#555577", font=f_instruc).pack(pady=int(4*sc))
 
         self.lbl_direccion = tk.Label(self.root, text="", bg="#1a1a2e", font=f_dir)
         self.lbl_direccion.pack(pady=int(2*sc))
 
-        # ── Panel "Colocar grosería" ──────────────────────────────────────────
         frame_groseria = tk.Frame(self.root, bg="#1a1a2e")
         frame_groseria.pack(pady=(int(6*sc), int(4*sc)))
 
@@ -261,14 +360,25 @@ class InterfazTinder:
         self.lbl_groseria_aviso = tk.Label(self.root, text="", bg="#1a1a2e",
                                            fg="#00ff88", font=f_groseria)
         self.lbl_groseria_aviso.pack()
-        # ─────────────────────────────────────────────────────────────────────
 
         self.canvas.bind("<ButtonPress-1>",  self._inicio_arrastre)
         self.canvas.bind("<B1-Motion>",       self._durante_arrastre)
         self.canvas.bind("<ButtonRelease-1>", self._fin_arrastre)
+        self.root.bind("<Left>",  lambda e: self._tecla_izquierda())
+        self.root.bind("<Right>", lambda e: self._tecla_derecha())
 
         self._cargar_confesion()
         self.root.mainloop()
+
+    def _tecla_derecha(self):
+        if not self.variantes:
+            return
+        self._accion_derecha()
+
+    def _tecla_izquierda(self):
+        if not self.variantes:
+            return
+        self._accion_izquierda()
 
     def _agregar_hereje(self):
         palabra = self.entry_groseria.get().strip().lower()
