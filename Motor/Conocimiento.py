@@ -70,15 +70,15 @@ def _aplicar_censura(draw, linea, fuente, x_inicio, y, color):
         alto_t  = bbox_t[3] - bbox_t[1]
 
         # Convertimos a minúsculas para la comparación
-        limpia = token.lower()
+        palabra = re.sub(r'^\W+|\W+$', '', token).lower()
 
-        # Verificamos si hay alguna herejía dentro de este token aislado
-        if any(herejia in limpia for herejia in _HEREJIAS):
+        # Solo censuramos si la palabra completa está en Herejia.txt
+        if palabra in _HEREJIAS:
             draw.rectangle(
                 [
-                    x_cursor + (ancho_t / 2), 
-                    y + DESFASE_CENSURADOR, 
-                    x_cursor + ancho_t, 
+                    x_cursor + (ancho_t / 2),
+                    y + DESFASE_CENSURADOR,
+                    x_cursor + ancho_t,
                     y + alto_t + 2 + DESFASE_CENSURADOR
                 ],
                 fill=color
