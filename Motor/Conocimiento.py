@@ -3,15 +3,17 @@ from pilmoji import Pilmoji
 from pilmoji.source import GoogleEmojiSource
 import os
 import re
+import math
 from Orden_universal import (
-    Y_NUMERO, Y_CAMPUS, Y_CONFESION, X_NUMERO, X_CAMPUS,
-    MARGEN_LATERAL, ANCHO_IMAGEN, SIZE_FUENTE_NUMERO, SIZE_FUENTE_SEDE,
-    SIZE_FUENTE_CONFESION, Y_LIMITE_INFERIOR_CONFESION, Y_MITAD,
+    Y_NUMERO, Y_CAMPUS, Y_CONFESION, Y_CENTRO_CONFESION, X_NUMERO, X_CAMPUS,
+    X_CENTRO_CONFESION, MARGEN_LATERAL, ANCHO_IMAGEN, SIZE_FUENTE_NUMERO,
+    SIZE_FUENTE_SEDE, SIZE_FUENTE_CONFESION, Y_LIMITE_INFERIOR_CONFESION, Y_MITAD,
     FUENTE_MONTSERRAT, FUENTE_OPENSANS, FUENTE_OPENSANS_XB,
     COLOR_BLANCO, COLORES_CONFESION, CARPETA_CONFESIONES
 )
 
-DESFASE_CENSURADOR = 11
+DESFASE_CENSURADOR = 0
+LIMITE_PALABRAS    = 175  # ajustar según Erudito_a_prueba.py
 
 _DUMMY_IMG  = Image.new("RGB", (1, 1))
 _DUMMY_DRAW = ImageDraw.Draw(_DUMMY_IMG)
@@ -54,38 +56,28 @@ def _pilmoji_text_seguro(pilmoji, draw, pos, texto, font, fill):
         texto_limpio = _PATRON_EMOJI.sub("", texto).strip()
         draw.text(pos, texto_limpio, font=font, fill=fill)
 
-def _aplicar_censura(draw, linea, fuente, x_inicio, y, color):
+def _aplicar_censura(draw, linea, fuente, x_inicio, y):
     if not _HEREJIAS:
         return
-
-    # Dividimos separando palabras de signos de puntuación y espacios
-    # Ej: "legible.maraca ctm" -> ['legible', '.', 'maraca', ' ', 'ctm']
-    tokens = [t for t in re.split(r'(\W+)', linea) if t]
+    palabras = linea.split(" ")
     x_cursor = x_inicio
-
-    for token in tokens:
-        # Medimos exactamente este fragmento (sea palabra, punto o espacio)
-        bbox_t  = _DUMMY_DRAW.textbbox((0, 0), token, font=fuente)
-        ancho_t = bbox_t[2] - bbox_t[0]
-        alto_t  = bbox_t[3] - bbox_t[1]
-
-        # Convertimos a minúsculas para la comparación
-        palabra = re.sub(r'^\W+|\W+$', '', token).lower()
-
-        # Solo censuramos si la palabra completa está en Herejia.txt
-        if palabra in _HEREJIAS:
+    for palabra in palabras:
+        if not palabra:
+            bbox_esp = _DUMMY_DRAW.textbbox((0, 0), " ", font=fuente)
+            x_cursor += bbox_esp[2] - bbox_esp[0]
+            continue
+        bbox_p  = _DUMMY_DRAW.textbbox((0, 0), palabra, font=fuente)
+        ancho_p = bbox_p[2] - bbox_p[0]
+        alto_p  = bbox_p[3] - bbox_p[1]
+        limpia  = re.sub(r"[^\w]", "", palabra).lower()
+        if limpia in _HEREJIAS:
+            inicio_rect = x_cursor + int(ancho_p * DESFASE_CENSURADOR)
             draw.rectangle(
-                [
-                    x_cursor + (ancho_t / 2),
-                    y + DESFASE_CENSURADOR,
-                    x_cursor + ancho_t,
-                    y + alto_t + 2 + DESFASE_CENSURADOR
-                ],
-                fill=color
+                [inicio_rect, y, x_cursor + ancho_p, y + alto_p + 2],
+                fill=(0, 0, 0, 255)
             )
-
-        # Avanzamos el cursor el ancho exacto del token actual
-        x_cursor += ancho_t
+        bbox_esp = _DUMMY_DRAW.textbbox((0, 0), palabra + " ", font=fuente)
+        x_cursor += bbox_esp[2] - bbox_esp[0]
 
 def dividir_texto_en_lineas(texto, fuente, ancho_max):
     palabras = texto.split()
@@ -143,6 +135,14 @@ def _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom,
 
     lineas_con_pos = []
 
+    alto_total = sum(
+        (_DUMMY_DRAW.textbbox((0, 0), l, font=fuente)[3]
+         - _DUMMY_DRAW.textbbox((0, 0), l, font=fuente)[1] + 10)
+        for l in lineas
+    ) if lineas else 0
+
+    y_actual = max(Y_CONFESION, Y_CENTRO_CONFESION - alto_total // 2)
+
     with Pilmoji(img, source=GoogleEmojiSource) as pilmoji:
         _pilmoji_text_seguro(pilmoji, draw,
                              (x_numero, Y_NUMERO), texto_numero, fuente_numero, COLOR_BLANCO)
@@ -153,17 +153,16 @@ def _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom,
             _pilmoji_text_seguro(pilmoji, draw,
                                  (x_campus, Y_CAMPUS), sede_custom, fuente_campus, COLOR_BLANCO)
 
-        y_actual = Y_CONFESION
         for linea in lineas:
             bbox = _DUMMY_DRAW.textbbox((0, 0), linea, font=fuente)
-            x    = (ANCHO_IMAGEN - (bbox[2] - bbox[0])) // 2
+            x    = X_CENTRO_CONFESION - (bbox[2] - bbox[0]) // 2
             _pilmoji_text_seguro(pilmoji, draw,
                                  (x, y_actual), linea, fuente, color_confesion)
             lineas_con_pos.append((linea, x, y_actual))
             y_actual += (bbox[3] - bbox[1]) + 10
 
     for linea, x, y in lineas_con_pos:
-        _aplicar_censura(draw, linea, fuente, x, y,color_confesion)
+        _aplicar_censura(draw, linea, fuente, x, y)
 
     if adjunto and y_adjunto_desde:
         espacio_h = ancho_max
@@ -231,51 +230,52 @@ def _conf_path(nombre):
     return os.path.join(CARPETA_CONFESIONES, nombre)
 
 def _generar_versiones_gif(ruta_plantilla, nombre_plantilla, numero, sede_custom,
-                           confesion, color_confesion, ruta_gif, ancho_max):
+                            confesion, color_confesion, ruta_gif, ancho_max, sufijo=""):
     f_m, l_m = ajustar_fuente_confesion(
         confesion, FUENTE_OPENSANS_XB, ancho_max, Y_CONFESION, Y_MITAD - 20, SIZE_FUENTE_CONFESION)
     base_v1  = _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom, l_m, f_m, color_confesion)
     fr_v1, dur_v1 = _componer_gif_frames(base_v1, ruta_gif, Y_MITAD, ancho_max)
-    _guardar_gif(fr_v1, dur_v1, _conf_path(f"Confesion {numero} V1.gif"))
+    _guardar_gif(fr_v1, dur_v1, _conf_path(f"Confesion {numero}{sufijo} V1.gif"))
 
     f_c, l_c = ajustar_fuente_confesion(
         confesion, FUENTE_OPENSANS_XB, ancho_max, Y_CONFESION, Y_LIMITE_INFERIOR_CONFESION, SIZE_FUENTE_CONFESION)
     _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom, l_c, f_c, color_confesion
-                     ).save(_conf_path(f"Confesion {numero} V2 (1).png"))
+                     ).save(_conf_path(f"Confesion {numero}{sufijo} V2 (1).png"))
 
     base_v2 = _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom, [], f_c, color_confesion)
     fr_v2, dur_v2 = _componer_gif_frames(base_v2, ruta_gif, Y_CONFESION, ancho_max)
-    _guardar_gif(fr_v2, dur_v2, _conf_path(f"Confesion {numero} V2 (2).gif"))
+    _guardar_gif(fr_v2, dur_v2, _conf_path(f"Confesion {numero}{sufijo} V2 (2).gif"))
 
 def _generar_versiones_video(ruta_plantilla, nombre_plantilla, numero, sede_custom,
-                             confesion, color_confesion, ruta_video, ancho_max):
+                              confesion, color_confesion, ruta_video, ancho_max, sufijo=""):
     f_m, l_m = ajustar_fuente_confesion(
         confesion, FUENTE_OPENSANS_XB, ancho_max, Y_CONFESION, Y_MITAD - 20, SIZE_FUENTE_CONFESION)
     base_v1  = _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom, l_m, f_m, color_confesion)
     clip_v1  = _componer_video_clip(base_v1, ruta_video, Y_MITAD, ancho_max)
     if clip_v1:
         try:
-            clip_v1.write_videofile(_conf_path(f"Confesion {numero} V1.mp4"), logger=None, verbose=False)
+            clip_v1.write_videofile(
+                _conf_path(f"Confesion {numero}{sufijo} V1.mp4"), logger=None, verbose=False)
         finally:
             clip_v1.close()
 
     f_c, l_c = ajustar_fuente_confesion(
         confesion, FUENTE_OPENSANS_XB, ancho_max, Y_CONFESION, Y_LIMITE_INFERIOR_CONFESION, SIZE_FUENTE_CONFESION)
     _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom, l_c, f_c, color_confesion
-                     ).save(_conf_path(f"Confesion {numero} V2 (1).png"))
+                     ).save(_conf_path(f"Confesion {numero}{sufijo} V2 (1).png"))
 
     base_v2  = _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom, [], f_c, color_confesion)
     clip_v2  = _componer_video_clip(base_v2, ruta_video, Y_CONFESION, ancho_max)
     if clip_v2:
         try:
-            clip_v2.write_videofile(_conf_path(f"Confesion {numero} V2 (2).mp4"), logger=None, verbose=False)
+            clip_v2.write_videofile(
+                _conf_path(f"Confesion {numero}{sufijo} V2 (2).mp4"), logger=None, verbose=False)
         finally:
             clip_v2.close()
 
-def generar_imagen(nombre_plantilla, numero, confesion,
-                   sede_custom=None, ruta_adjunto=None, requiere_canva=False):
-    os.makedirs(CARPETA_CONFESIONES, exist_ok=True)
-
+def _generar_imagen_simple(nombre_plantilla, numero, confesion,
+                            sede_custom=None, ruta_adjunto=None,
+                            requiere_canva=False, sufijo=""):
     color_confesion = COLORES_CONFESION.get(nombre_plantilla, COLORES_CONFESION["Default"])
     ruta_plantilla  = (
         f"Plantillas/{nombre_plantilla}.png"
@@ -287,21 +287,23 @@ def generar_imagen(nombre_plantilla, numero, confesion,
     if not ruta_adjunto:
         f, l = ajustar_fuente_confesion(
             confesion, FUENTE_OPENSANS_XB,
-            ancho_max, Y_CONFESION, Y_LIMITE_INFERIOR_CONFESION, SIZE_FUENTE_CONFESION)
-        img = _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom, l, f, color_confesion)
-        nombre_archivo = (
-            f"Confesion {numero} (Formato no disponible, configurar en Canva).png"
-            if requiere_canva else f"Confesion {numero}.png"
+            ancho_max, Y_CONFESION, Y_LIMITE_INFERIOR_CONFESION, SIZE_FUENTE_CONFESION
         )
+        img = _componer_imagen(ruta_plantilla, nombre_plantilla, numero,
+                               sede_custom, l, f, color_confesion)
+        if requiere_canva:
+            nombre_archivo = f"Confesion {numero}{sufijo} (Formato no disponible, configurar en Canva).png"
+        else:
+            nombre_archivo = f"Confesion {numero}{sufijo}.png"
         img.save(_conf_path(nombre_archivo))
 
     elif _es_gif(ruta_adjunto):
         _generar_versiones_gif(ruta_plantilla, nombre_plantilla, numero, sede_custom,
-                               confesion, color_confesion, ruta_adjunto, ancho_max)
+                               confesion, color_confesion, ruta_adjunto, ancho_max, sufijo)
 
     elif _es_video(ruta_adjunto):
         _generar_versiones_video(ruta_plantilla, nombre_plantilla, numero, sede_custom,
-                                 confesion, color_confesion, ruta_adjunto, ancho_max)
+                                 confesion, color_confesion, ruta_adjunto, ancho_max, sufijo)
 
     else:
         adjunto  = Image.open(ruta_adjunto).convert("RGBA")
@@ -313,16 +315,46 @@ def generar_imagen(nombre_plantilla, numero, confesion,
         _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom,
                          l_m, f_m, color_confesion,
                          adjunto=adjunto, y_adjunto_desde=Y_MITAD
-                         ).save(_conf_path(f"Confesion {numero} V1.png"))
+                         ).save(_conf_path(f"Confesion {numero}{sufijo} V1.png"))
 
         _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom,
                          l_c, f_c, color_confesion
-                         ).save(_conf_path(f"Confesion {numero} V2 (1).png"))
+                         ).save(_conf_path(f"Confesion {numero}{sufijo} V2 (1).png"))
 
         _componer_imagen(ruta_plantilla, nombre_plantilla, numero, sede_custom,
                          [], f_c, color_confesion,
                          adjunto=adjunto, y_adjunto_desde=Y_CONFESION
-                         ).save(_conf_path(f"Confesion {numero} V2 (2).png"))
+                         ).save(_conf_path(f"Confesion {numero}{sufijo} V2 (2).png"))
+
+def generar_imagen(nombre_plantilla, numero, confesion,
+                   sede_custom=None, ruta_adjunto=None, requiere_canva=False):
+    os.makedirs(CARPETA_CONFESIONES, exist_ok=True)
+
+    palabras = confesion.split()
+
+    if len(palabras) > LIMITE_PALABRAS and not ruta_adjunto:
+        total_partes = math.ceil(len(palabras) / LIMITE_PALABRAS)
+        for idx in range(total_partes):
+            parte = " ".join(palabras[idx * LIMITE_PALABRAS:(idx + 1) * LIMITE_PALABRAS])
+            _generar_imagen_simple(
+                nombre_plantilla = nombre_plantilla,
+                numero           = numero,
+                confesion        = parte,
+                sede_custom      = sede_custom,
+                requiere_canva   = requiere_canva,
+                sufijo           = f" parte_{idx + 1}",
+            )
+        return
+
+    _generar_imagen_simple(
+        nombre_plantilla = nombre_plantilla,
+        numero           = numero,
+        confesion        = confesion,
+        sede_custom      = sede_custom,
+        ruta_adjunto     = ruta_adjunto,
+        requiere_canva   = requiere_canva,
+        sufijo           = "",
+    )
 
 def indecision(df, id_target, accion_texto):
     fila = df[df["id_csv"] == id_target]

@@ -10,9 +10,11 @@ CARPETA_CONFESIONES = os.path.join(os.path.dirname(BASE_DIR), "Confesiones")
 
 Y_NUMERO    = 33
 Y_CAMPUS    = 93
-Y_CONFESION = 210
+Y_CONFESION = 115
 X_NUMERO    = 541
 X_CAMPUS    = 545
+X_CENTRO_CONFESION = 540
+Y_CENTRO_CONFESION = 540
 MARGEN_LATERAL              = 70
 ANCHO_IMAGEN                = 1080
 ALTO_IMAGEN                 = 1080
